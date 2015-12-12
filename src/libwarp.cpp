@@ -26,8 +26,8 @@ unique_ptr<libwarp_state_struct> libwarp_state;
 safe_mutex libwarp_lock;
 
 LIBWARP_ERROR_CODE libwarp_init() {
-	static once_flag did_init;
-	call_once(did_init, [] {
+	static atomic<bool> did_init { false };
+	if(!did_init.exchange(true)) {
 		// TODO: need proper gl init for opencl
 		floor::init("", "data/", true, "config.json", true);
 		atexit([] {
@@ -55,7 +55,7 @@ LIBWARP_ERROR_CODE libwarp_init() {
 		
 		// init done
 		return LIBWARP_SUCCESS;
-	});
+	};
 	return LIBWARP_SUCCESS;
 }
 
