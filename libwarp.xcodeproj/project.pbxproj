@@ -13,6 +13,9 @@
 		5C1091F917D148CB007F536E /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F817D148CB007F536E /* AppKit.framework */; };
 		5C1091FB17D148D0007F536E /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091FA17D148D0007F536E /* ApplicationServices.framework */; };
 		5C1091FD17D148DB007F536E /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091FC17D148DB007F536E /* libxml2.dylib */; };
+		5C3D960D1C1C597C009C0586 /* libwarp_internal.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 5C3D960B1C1C597B009C0586 /* libwarp_internal.hpp */; };
+		5C3D960E1C1C597C009C0586 /* libwarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C3D960C1C1C597B009C0586 /* libwarp.cpp */; };
+		5C3D960F1C1C597C009C0586 /* libwarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C3D960C1C1C597B009C0586 /* libwarp.cpp */; };
 		5C7173A918D7144E00DDF097 /* OpenALSoft.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C7173A818D7144E00DDF097 /* OpenALSoft.framework */; };
 		5CA0C9B21BFCC0E900D4A417 /* libwarp.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CA0C9B11BFCC0E900D4A417 /* libwarp.mm */; };
 		5CA0C9B31BFCC0E900D4A417 /* libwarp.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CA0C9B11BFCC0E900D4A417 /* libwarp.mm */; };
@@ -32,6 +35,8 @@
 		5C1091FA17D148D0007F536E /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 		5C1091FC17D148DB007F536E /* libxml2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.dylib; path = usr/lib/libxml2.dylib; sourceTree = SDKROOT; };
 		5C2F83681B63FF1000B27BE3 /* metal */ = {isa = PBXFileReference; lastKnownFileType = folder; name = metal; path = ../../../../System/Library/PrivateFrameworks/GPUCompiler.framework/Versions/A/Libraries/lib/clang/3.5/include/metal; sourceTree = "<group>"; };
+		5C3D960B1C1C597B009C0586 /* libwarp_internal.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = libwarp_internal.hpp; path = src/libwarp_internal.hpp; sourceTree = "<group>"; };
+		5C3D960C1C1C597B009C0586 /* libwarp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = libwarp.cpp; path = src/libwarp.cpp; sourceTree = "<group>"; };
 		5C7173A818D7144E00DDF097 /* OpenALSoft.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenALSoft.framework; path = /Library/Frameworks/OpenALSoft.framework; sourceTree = "<absolute>"; };
 		5C782595187226DA00725EAF /* libwarp_prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libwarp_prefix.pch; sourceTree = "<group>"; };
 		5CA0C9AD1BFCBA7B00D4A417 /* libwarp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = libwarp.h; path = include/libwarp/libwarp.h; sourceTree = "<group>"; };
@@ -97,6 +102,8 @@
 		5C1091D317D11547007F536E /* src */ = {
 			isa = PBXGroup;
 			children = (
+				5C3D960B1C1C597B009C0586 /* libwarp_internal.hpp */,
+				5C3D960C1C1C597B009C0586 /* libwarp.cpp */,
 				5CA0C9B11BFCC0E900D4A417 /* libwarp.mm */,
 				5CA0C9AE1BFCBA8A00D4A417 /* build_version.hpp */,
 			);
@@ -157,6 +164,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C3D960D1C1C597C009C0586 /* libwarp_internal.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,6 +268,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5CA0C9B21BFCC0E900D4A417 /* libwarp.mm in Sources */,
+				5C3D960E1C1C597C009C0586 /* libwarp.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -268,6 +277,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5CA0C9B31BFCC0E900D4A417 /* libwarp.mm in Sources */,
+				5C3D960F1C1C597C009C0586 /* libwarp.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

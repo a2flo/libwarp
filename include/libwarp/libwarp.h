@@ -16,8 +16,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __LIBWARP_HPP__
-#define __LIBWARP_HPP__
+#ifndef __LIBWARP_H__
+#define __LIBWARP_H__
 
 #include <stdint.h>
 
