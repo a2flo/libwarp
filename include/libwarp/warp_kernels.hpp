@@ -276,7 +276,7 @@ static float2 decode_2d_motion(const uint32_t& encoded_motion) {
 }
 
 // gaussian blur helper functions (used in warp_gather_forward)
-#define TAP_COUNT 19u
+#define TAP_COUNT 21u
 template <uint32_t tap_count>
 static constexpr uint32_t find_effective_n() {
 	// minimal contribution a fully white pixel must have to affect the blur result
@@ -326,7 +326,8 @@ kernel void warp_gather_forward(const_image_2d<float> img_color,
 	screen_check();
 	
 	// iterate
-	const float2 p_init = (float2(global_id.xy) + 0.5f) * warp_camera::inv_screen_size; // start at pixel center (this is p_t+alpha)
+	const int2 coord { global_id.xy };
+	const float2 p_init = (float2(coord) + 0.5f) * warp_camera::inv_screen_size; // start at pixel center (this is p_t+alpha)
 	float2 p_fwd = p_init;
 	for(uint32_t i = 0; i < 3; ++i) {
 		const auto motion = decode_2d_motion(img_motion.read(p_fwd));
@@ -334,31 +335,32 @@ kernel void warp_gather_forward(const_image_2d<float> img_color,
 	}
 	
 #if 0 // just read the sample, ignoring any error
-	img_out_color.write(global_id.xy, img_color.read_linear(p_fwd));
-#else // TODO/WIP: if screen-space error is too high, blur from surrounding pixels
+	img_out_color.write(coord, img_color.read_linear(p_fwd));
+#else // if screen-space error is too high, compute directional blur
 	const auto motion_fwd = decode_2d_motion(img_motion.read(p_fwd));
 	const auto err_fwd = ((p_fwd + delta * motion_fwd - p_init).dot() +
 						  // account for out-of-bound access (-> large error so any checks will fail)
 						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1e10f : 0.0f));
 	
-	if(err_fwd >= 0.00125f * 0.00125f) {
+	const float epsilon_1 { 0.0025f };
+	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
+	float4 color;
+	if(err_fwd >= epsilon_1_sq) {
+		// compute directional blur in the motion direction of the pixel
 		constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
 		constexpr const int overlap = TAP_COUNT / 2;
-		//const int2 img_coord { p_fwd * warp_camera::screen_size };
-		const int2 img_coord { global_id.xy };
+		const auto dir = motion_fwd.normalized();
 		
-		// note: not correct of course, would need a second pass
-		float4 color;
 #pragma clang loop unroll_count(TAP_COUNT)
 		for(int i = -overlap; i <= overlap; ++i) {
-			color += coeffs[size_t(overlap + i)] * img_color.read(img_coord + int2 { i, 0 });
-			color += coeffs[size_t(overlap + i)] * img_color.read(img_coord + int2 { 0, i });
+			// TODO: use linear sampling / blur
+			color += coeffs[size_t(overlap + i)] * img_color.read(coord + int2(float(i) * dir));
 		}
-		color *= 0.5f;
-		
-		img_out_color.write(img_coord, color);
 	}
-	else img_out_color.write(global_id.xy, img_color.read_linear(p_fwd));
+	else {
+		color = img_color.read_linear(p_fwd);
+	}
+	img_out_color.write(coord, color);
 #endif
 }
 
