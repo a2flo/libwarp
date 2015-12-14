@@ -124,8 +124,8 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 															  " -isystem /usr/include/libwarp/" +
 															  " -isystem /opt/libwarp/include/libwarp/" +
 #else
-															  " -isystem " + core::expand_path_with_env("%ProgramW6432%/libwarp/include") +
-															  " -isystem " + core::expand_path_with_env("%ProgramFiles%/libwarp/include") +
+															  " -isystem \"" + core::expand_path_with_env("%ProgramW6432%/libwarp/include/libwarp") + "\"" +
+															  " -isystem \"" + core::expand_path_with_env("%ProgramFiles%/libwarp/include/libwarp") + "\"" +
 #endif
 															  " -include warp_kernels.hpp" +
 															  // camera setup
