@@ -1,0 +1,25 @@
+
+*libwarp*
+
+Image-space Warping library, implementing scatter-based warping, bidirectional gather-based warping and forward-only gather-based warping.
+
+*Build Instructions:*
+* build and install libfloor: https://github.com/a2flo/floor
+* Unix: ./build.sh
+* OS X: open libwarp.xcodeproj in Xcode and build
+* Windows: open libwarp.sln in Visual Studio and build
+
+*Installation (Linux, OS X, other Unix):*
+* mkdir -p /opt/libwarp
+* sudo ln -sf /path/to/libwarp/include /opt/libwarp/include
+* sudo ln -sf /path/to/libwarp/bin /opt/libwarp/lib
+* alternatively: copy these files/folders there
+
+*Installation (Windows / VS):*
+* create a "%%ProgramFiles%%/libwarp" folder (C:/Program Files/libwarp)
+* inside this folder:
+** copy the libwarp "include" folder there
+** create a "lib" folder and copy libwarp.lib/libwarpd.lib there
+
+*example:*
+* warp example in https://github.com/a2flo/floor_examples
