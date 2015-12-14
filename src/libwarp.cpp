@@ -53,6 +53,13 @@ LIBWARP_ERROR_CODE libwarp_init() {
 			libwarp_state->tile_size = { 32, 32 };
 		}
 		
+#if defined(__WINDOWS__)
+		// max work-item count with host-compute on windows is currently 64
+		if(libwarp_state->ctx->get_compute_type() == COMPUTE_TYPE::HOST) {
+			libwarp_state->tile_size = { 8, 8 };
+		}
+#endif
+		
 		// init done
 		return LIBWARP_SUCCESS;
 	};
@@ -117,7 +124,8 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 															  " -isystem /usr/include/libwarp/" +
 															  " -isystem /opt/libwarp/include/libwarp/" +
 #else
-															  // TODO: where/what to include?
+															  " -isystem " + core::expand_path_with_env("%ProgramW6432%/libwarp/include") +
+															  " -isystem " + core::expand_path_with_env("%ProgramFiles%/libwarp/include") +
 #endif
 															  " -include warp_kernels.hpp" +
 															  // camera setup
@@ -138,12 +146,12 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 	// retrieve kernels
 	// NOTE: corresponds to WARP_KERNEL
 	static const char* kernel_names[warp_kernel_count()] {
-		"warp_scatter_depth",
-		"warp_scatter_color",
-		"img_clear",
-		"single_px_fixup",
-		"warp_gather_forward",
-		"warp_gather",
+		"libwarp_warp_scatter_depth",
+		"libwarp_warp_scatter_color",
+		"libwarp_img_clear",
+		"libwarp_single_px_fixup",
+		"libwarp_warp_gather_forward",
+		"libwarp_warp_gather",
 	};
 	for(size_t i = 0; i < warp_kernel_count(); ++i) {
 		program->kernels[i] = program->program->get_kernel(kernel_names[i]);

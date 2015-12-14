@@ -51,12 +51,22 @@
 
 // TILE_SIZE_X: work-group x-size / tile width
 #if !defined(TILE_SIZE_X)
+#if defined(__WINDOWS__) && defined(FLOOR_COMPUTE_HOST)
+// on windows with host-compute: must be limited to 8
+#define TILE_SIZE_X 8
+#else // everywhere else: always use 32 as the default
 #define TILE_SIZE_X 32
+#endif
 #endif
 
 // TILE_SIZE_Y: work-group y-size / tile height
 #if !defined(TILE_SIZE_Y)
+#if defined(__WINDOWS__) && defined(FLOOR_COMPUTE_HOST)
+// on windows with host-compute: must be limited to 8
+#define TILE_SIZE_Y 8
+#else // everywhere else: always use 16 as the default
 #define TILE_SIZE_Y 16
+#endif
 #endif
 
 // screen origin is left bottom for opengl, left top for metal (and directx)
@@ -217,10 +227,10 @@ floor_inline_always static auto scatter(const int2& coord,
 }
 
 //
-kernel void warp_scatter_depth(const_image_2d_depth<float> img_depth,
-							   const_image_2d<uint1> img_motion,
-							   buffer<float> depth_buffer,
-							   param<float> delta) {
+kernel void libwarp_warp_scatter_depth(const_image_2d_depth<float> img_depth,
+									   const_image_2d<uint1> img_motion,
+									   buffer<float> depth_buffer,
+									   param<float> delta) {
 	screen_check();
 	
 	const auto scattered = scatter(global_id.xy, delta, img_depth, img_motion);
@@ -230,12 +240,12 @@ kernel void warp_scatter_depth(const_image_2d_depth<float> img_depth,
 	}
 }
 //
-kernel void warp_scatter_color(const_image_2d<float> img_color,
-							   const_image_2d_depth<float> img_depth,
-							   const_image_2d<uint1> img_motion,
-							   image_2d<float4, true> img_out_color,
-							   buffer<const float> depth_buffer,
-							   param<float> delta) {
+kernel void libwarp_warp_scatter_color(const_image_2d<float> img_color,
+									   const_image_2d_depth<float> img_depth,
+									   const_image_2d<uint1> img_motion,
+									   image_2d<float4, true> img_out_color,
+									   buffer<const float> depth_buffer,
+									   param<float> delta) {
 	screen_check();
 	
 	const auto coord = global_id.xy;
@@ -319,10 +329,10 @@ static constexpr auto compute_coefficients() {
 	return ret;
 }
 
-kernel void warp_gather_forward(const_image_2d<float> img_color,
-								const_image_2d<uint1> img_motion,
-								image_2d<float4, true> img_out_color,
-								param<float> delta) {
+kernel void libwarp_warp_gather_forward(const_image_2d<float> img_color,
+										const_image_2d<uint1> img_motion,
+										image_2d<float4, true> img_out_color,
+										param<float> delta) {
 	screen_check();
 	
 	// iterate
@@ -364,18 +374,18 @@ kernel void warp_gather_forward(const_image_2d<float> img_color,
 #endif
 }
 
-kernel void warp_gather(const_image_2d<float> img_color,
-						const_image_2d_depth<float> img_depth,
-						const_image_2d<float> img_color_prev,
-						const_image_2d_depth<float> img_depth_prev,
-						const_image_2d<uint1> img_motion_forward,
-						const_image_2d<uint1> img_motion_backward,
-						// packed <forward depth: fwd t-1 -> t (used here), backward depth: bwd t-1 -> t-2 (unused here)>
-						const_image_2d<float2> img_motion_depth_forward,
-						// packed <forward depth: t+1 -> t (unused here), backward depth: t -> t-1 (used here)>
-						const_image_2d<float2> img_motion_depth_backward,
-						image_2d<float4, true> img_out_color,
-						param<float> delta) {
+kernel void libwarp_warp_gather(const_image_2d<float> img_color,
+								const_image_2d_depth<float> img_depth,
+								const_image_2d<float> img_color_prev,
+								const_image_2d_depth<float> img_depth_prev,
+								const_image_2d<uint1> img_motion_forward,
+								const_image_2d<uint1> img_motion_backward,
+								// packed <forward depth: fwd t-1 -> t (used here), backward depth: bwd t-1 -> t-2 (unused here)>
+								const_image_2d<float2> img_motion_depth_forward,
+								// packed <forward depth: t+1 -> t (unused here), backward depth: t -> t-1 (used here)>
+								const_image_2d<float2> img_motion_depth_backward,
+								image_2d<float4, true> img_out_color,
+								param<float> delta) {
 	screen_check();
 	
 	// iterate
@@ -467,7 +477,7 @@ kernel void warp_gather(const_image_2d<float> img_color,
 	img_out_color.write(global_id.xy, color);
 }
 
-kernel void single_px_fixup(image_2d<float4> warp_img) {
+kernel void libwarp_single_px_fixup(image_2d<float4> warp_img) {
 	screen_check();
 	
 	const int2 coord { global_id.xy };
@@ -498,8 +508,8 @@ kernel void single_px_fixup(image_2d<float4> warp_img) {
 	}
 }
 
-kernel void img_clear(image_2d<float4, true> img,
-					  param<float4> clear_color) {
+kernel void libwarp_img_clear(image_2d<float4, true> img,
+							  param<float4> clear_color) {
 	screen_check();
 	img.write(global_id.xy, float4 { clear_color.xyz, 0.0f });
 }
