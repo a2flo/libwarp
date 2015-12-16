@@ -117,30 +117,29 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 	
 	// build it
 	auto program = make_shared<libwarp_state_struct::camera_setup_program>();
-	program->program = libwarp_state->ctx->add_program_source("", // magic
-															  ""s +
 #if !defined(__WINDOWS__)
-															  " -isystem /usr/local/include/libwarp/" +
-															  " -isystem /usr/include/libwarp/" +
-															  " -isystem /opt/libwarp/include/libwarp/" +
+	const string kernel_file_name = "/opt/libwarp/include/libwarp/warp_kernels.hpp";
 #else
-															  " -isystem \"" + core::expand_path_with_env("%ProgramW6432%/libwarp/include/libwarp") + "\"" +
-															  " -isystem \"" + core::expand_path_with_env("%ProgramFiles%/libwarp/include/libwarp") + "\"" +
+	string kernel_file_name = core::expand_path_with_env("%ProgramW6432%/libwarp/include/libwarp/warp_kernels.hpp");
+	if(!file_io::is_file(kernel_file_name)) {
+		kernel_file_name = core::expand_path_with_env("%ProgramFiles%/libwarp/include/libwarp/warp_kernels.hpp");
+	}
 #endif
-															  " -include warp_kernels.hpp" +
-															  // camera setup
-															  " -DLIBWARP_SCREEN_WIDTH=" + to_string(camera_setup->screen_width) +
-															  " -DLIBWARP_SCREEN_HEIGHT=" + to_string(camera_setup->screen_height) +
-															  " -DLIBWARP_SCREEN_FOV=" + to_string(camera_setup->field_of_view) +
-															  " -DLIBWARP_NEAR_PLANE=" + to_string(camera_setup->near_plane) +
-															  " -DLIBWARP_FAR_PLANE=" + to_string(camera_setup->far_plane) +
-															  " -DTILE_SIZE_X=" + to_string(libwarp_state->tile_size.x) +
-															  " -DTILE_SIZE_Y=" + to_string(libwarp_state->tile_size.y) +
-															  " -DDEFAULT_DEPTH_TYPE=" +
-															  (camera_setup->depth_type == LIBWARP_DEPTH_NORMALIZED ?
-															   "depth_type::normalized" :
-															   (camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ?
-																"depth_type::z_div_w" : "depth_type::linear")));
+
+	program->program = libwarp_state->ctx->add_program_file(kernel_file_name,
+															// camera setup
+															" -DLIBWARP_SCREEN_WIDTH=" + to_string(camera_setup->screen_width) +
+															" -DLIBWARP_SCREEN_HEIGHT=" + to_string(camera_setup->screen_height) +
+															" -DLIBWARP_SCREEN_FOV=" + to_string(camera_setup->field_of_view) +
+															" -DLIBWARP_NEAR_PLANE=" + to_string(camera_setup->near_plane) +
+															" -DLIBWARP_FAR_PLANE=" + to_string(camera_setup->far_plane) +
+															" -DTILE_SIZE_X=" + to_string(libwarp_state->tile_size.x) +
+															" -DTILE_SIZE_Y=" + to_string(libwarp_state->tile_size.y) +
+															" -DDEFAULT_DEPTH_TYPE=" +
+															(camera_setup->depth_type == LIBWARP_DEPTH_NORMALIZED ?
+															 "depth_type::normalized" :
+															 (camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ?
+															  "depth_type::z_div_w" : "depth_type::linear")));
 	if(program == nullptr) return { LIBWARP_COMPILATION_FAILURE, {} };
 	
 	// retrieve kernels
