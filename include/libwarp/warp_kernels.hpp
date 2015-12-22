@@ -171,22 +171,20 @@ namespace warp_camera {
 	}
 };
 
-// used by decode_3d_motion
-static constexpr const float3 signs_lookup[8] {
-	float3 { 1.0f, 1.0f, 1.0f },
-	float3 { 1.0f, 1.0f, -1.0f },
-	float3 { 1.0f, -1.0f, 1.0f },
-	float3 { 1.0f, -1.0f, -1.0f },
-	float3 { -1.0f, 1.0f, 1.0f },
-	float3 { -1.0f, 1.0f, -1.0f },
-	float3 { -1.0f, -1.0f, 1.0f },
-	float3 { -1.0f, -1.0f, -1.0f },
-};
-
 // decodes the encoded input 3D motion vector
 // format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
 floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 	// lookup into constant memory + 1 shift is faster than 3 ANDs + 3 cmps/sels
+	static constexpr const float3 signs_lookup[8] {
+		float3 { 1.0f, 1.0f, 1.0f },
+		float3 { 1.0f, 1.0f, -1.0f },
+		float3 { 1.0f, -1.0f, 1.0f },
+		float3 { 1.0f, -1.0f, -1.0f },
+		float3 { -1.0f, 1.0f, 1.0f },
+		float3 { -1.0f, 1.0f, -1.0f },
+		float3 { -1.0f, -1.0f, 1.0f },
+		float3 { -1.0f, -1.0f, -1.0f },
+	};
 	const float3 signs = signs_lookup[encoded_motion >> 29u];
 	const uint3 shifted_motion {
 		(encoded_motion >> 19u) & 0x3FFu,
