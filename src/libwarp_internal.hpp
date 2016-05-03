@@ -127,6 +127,21 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 											  delta);
 			return LIBWARP_SUCCESS;
 		}
+		case KERNEL_SCATTER_CLEAR: {
+			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_CLEAR],
+											  global_work_size,
+											  libwarp_state->tile_size,
+											  libwarp_state->scatter.output,
+											  float4 { 0.0f });
+			return LIBWARP_SUCCESS;
+		}
+		case KERNEL_SCATTER_FIXUP: {
+			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_FIXUP],
+											  global_work_size,
+											  libwarp_state->tile_size,
+											  libwarp_state->scatter.output);
+			return LIBWARP_SUCCESS;
+		}
 		case KERNEL_GATHER_FORWARD_ONLY: {
 			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_GATHER_FORWARD_ONLY],
 											  global_work_size,

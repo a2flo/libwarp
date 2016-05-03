@@ -214,10 +214,11 @@ floor_inline_always static auto scatter(const int2& coord,
 	const auto new_pos = warp_camera::reconstruct_position(coord, linear_depth) + delta * motion;
 	// -> return
 	const struct {
-		const int2 coord;
+		const uint2 coord;
 		const float linear_depth;
 	} ret {
 		// project 3D position back into 2D
+		// NOTE: convert directly to uint so that we won't have to check for >= 0
 		.coord = warp_camera::reproject_position(new_pos),
 		.linear_depth = linear_depth
 	};
@@ -232,8 +233,8 @@ kernel void libwarp_warp_scatter_depth(const_image_2d_depth<float> img_depth,
 	screen_check();
 	
 	const auto scattered = scatter(global_id.xy, delta, img_depth, img_motion);
-	if(scattered.coord.x >= 0 && scattered.coord.x < LIBWARP_SCREEN_WIDTH &&
-	   scattered.coord.y >= 0 && scattered.coord.y < LIBWARP_SCREEN_HEIGHT) {
+	if(scattered.coord.x < LIBWARP_SCREEN_WIDTH &&
+	   scattered.coord.y < LIBWARP_SCREEN_HEIGHT) {
 		atomic_min(&depth_buffer[scattered.coord.y * LIBWARP_SCREEN_WIDTH + scattered.coord.x], scattered.linear_depth);
 	}
 }
@@ -248,8 +249,8 @@ kernel void libwarp_warp_scatter_color(const_image_2d<float> img_color,
 	
 	const auto coord = global_id.xy;
 	const auto scattered = scatter(coord, delta, img_depth, img_motion);
-	if(scattered.coord.x < 0 || scattered.coord.x >= LIBWARP_SCREEN_WIDTH ||
-	   scattered.coord.y < 0 || scattered.coord.y >= LIBWARP_SCREEN_HEIGHT) {
+	if(scattered.coord.x >= LIBWARP_SCREEN_WIDTH ||
+	   scattered.coord.y >= LIBWARP_SCREEN_HEIGHT) {
 		return;
 	}
 	
@@ -337,6 +338,7 @@ kernel void libwarp_warp_gather_forward(const_image_2d<float> img_color,
 	const int2 coord { global_id.xy };
 	const float2 p_init = (float2(coord) + 0.5f) * warp_camera::inv_screen_size; // start at pixel center (this is p_t+alpha)
 	float2 p_fwd = p_init;
+#pragma unroll
 	for(uint32_t i = 0; i < 3; ++i) {
 		const auto motion = decode_2d_motion(img_motion.read(p_fwd));
 		p_fwd = p_init - delta * motion;
@@ -391,10 +393,12 @@ kernel void libwarp_warp_gather(const_image_2d<float> img_color,
 	// dual init, opposing init
 	float2 p_fwd = p_init + delta * decode_2d_motion(img_motion_backward.read(p_init));
 	float2 p_bwd = p_init + (1.0f - delta) * decode_2d_motion(img_motion_forward.read(p_init));
+#pragma unroll
 	for(uint32_t i = 0; i < 3; ++i) {
 		const auto motion = decode_2d_motion(img_motion_forward.read(p_fwd));
 		p_fwd = p_init - delta * motion;
 	}
+#pragma unroll
 	for(uint32_t i = 0; i < 3; ++i) {
 		const auto motion = decode_2d_motion(img_motion_backward.read(p_bwd));
 		p_bwd = p_init - (1.0f - delta) * motion;
@@ -482,28 +486,29 @@ kernel void libwarp_single_px_fixup(image_2d<float4> warp_img) {
 	const auto color = warp_img.read(coord);
 	
 	// 0 if it hasn't been written (needs fixup), 1 if it has been written
-	if(color.w < 1.0f) {
-		// sample pixels around
-		const float4 colors[] {
-			warp_img.read(int2 { coord.x, coord.y - 1 }),
-			warp_img.read(int2 { coord.x + 1, coord.y }),
-			warp_img.read(int2 { coord.x, coord.y + 1 }),
-			warp_img.read(int2 { coord.x - 1, coord.y }),
-		};
-		
-		float3 avg;
-		float sum = 0.0f;
-		for(const auto& col : colors) {
-			if(col.w == 1.0f) {
-				avg += col.xyz;
-				sum += 1.0f;
-			}
-		}
-		avg /= sum;
-		
-		// write new averaged color
-		warp_img.write(coord, float4 { avg, 0.0f });
+	if(color.w >= 1.0f) return;
+	
+	// sample pixels around
+	const float4 colors[] {
+		// read with offset if possible
+		warp_img.read(coord, int2 { 0, -1 }),
+		warp_img.read(coord, int2 { 1, 0 }),
+		warp_img.read(coord, int2 { 0, 1 }),
+		warp_img.read(coord, int2 { -1, 0 }),
+	};
+	
+	float3 avg;
+	float sum = 0.0f;
+#pragma unroll
+	for(const auto& col : colors) {
+		// .w is 1.0f if valid, 0.0f if not (just multiply and add instead of checking)
+		avg += col.xyz * col.w;
+		sum += col.w;
 	}
+	avg *= 1.0f / sum;
+	
+	// write new averaged color
+	warp_img.write(coord, float4 { avg, 1.0f /* pretend this is a valid pixel now */ });
 }
 
 kernel void libwarp_img_clear(image_2d<float4, true> img,

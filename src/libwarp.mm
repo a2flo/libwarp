@@ -53,16 +53,25 @@ LIBWARP_ERROR_CODE libwarp_scatter_metal(const libwarp_camera_setup* const camer
 	const auto depth_buffer_size = sizeof(float) * camera_setup->screen_width * camera_setup->screen_height;
 	if(libwarp_state->scatter.depth_buffer == nullptr ||
 	   libwarp_state->scatter.depth_buffer->get_size() < depth_buffer_size) {
-		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(depth_buffer_size);
+		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(libwarp_state->dev, depth_buffer_size);
 		if(libwarp_state->scatter.depth_buffer == nullptr) {
 			return LIBWARP_DEPTH_BUFFER_FAILURE;
 		}
 	}
 	
 	// exec kernels
-	const auto err = run_warp_kernel<KERNEL_SCATTER_DEPTH_PASS>(camera_setup, delta);
-	if(err != LIBWARP_SUCCESS) return err;
-	return run_warp_kernel<KERNEL_SCATTER_COLOR_DEPTH_TEST>(camera_setup, delta);
+	// TODO: only clear first frame
+	auto err = run_warp_kernel<KERNEL_SCATTER_CLEAR>(camera_setup, delta);
+	if(err == LIBWARP_SUCCESS) {
+		err = run_warp_kernel<KERNEL_SCATTER_DEPTH_PASS>(camera_setup, delta);
+	}
+	if(err == LIBWARP_SUCCESS) {
+		err = run_warp_kernel<KERNEL_SCATTER_COLOR_DEPTH_TEST>(camera_setup, delta);
+	}
+	if(err == LIBWARP_SUCCESS) {
+		err = run_warp_kernel<KERNEL_SCATTER_FIXUP>(camera_setup, delta);
+	}
+	return err;
 }
 
 LIBWARP_ERROR_CODE libwarp_gather_metal(const libwarp_camera_setup* const camera_setup,
