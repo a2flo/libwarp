@@ -81,10 +81,13 @@ extern "C" {
 	} libwarp_camera_setup;
 	
 	//! scatter-based warping for use with OpenGL and CUDA/OpenCL/Host-Compute
+	//! 'clear_frame' signals if the current color data (from previous frame(s)) shoud be cleared or not
+	//! -> if the frame is not cleared, then empty pixels will retain the color from previous frames
 	//! NOTE: whether this uses forward-predicted motion or backwards-correct motion,
 	//!       solely depends on the data in the motion texture (not determined here)
 	LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setup,
 									   const float delta,
+									   const bool clear_frame,
 									   const uint32_t color_texture,
 									   const uint32_t depth_texture,
 									   const uint32_t motion_texture,
@@ -114,10 +117,13 @@ extern "C" {
 	
 #if defined(__APPLE__) && defined(__OBJC__)
 	//! scatter-based warping for use with Metal
+	//! 'clear_frame' signals if the current color data (from previous frame(s)) shoud be cleared or not
+	//! -> if the frame is not cleared, then empty pixels will retain the color from previous frames
 	//! NOTE: whether this uses forward-predicted motion or backwards-correct motion,
 	//!       solely depends on the data in the motion texture (not determined here)
 	LIBWARP_ERROR_CODE libwarp_scatter_metal(const libwarp_camera_setup* const camera_setup,
 											 const float delta,
+											 const bool clear_frame,
 											 id <MTLTexture> color_texture,
 											 id <MTLTexture> depth_texture,
 											 id <MTLTexture> motion_texture,
@@ -166,8 +172,8 @@ extern "C" {
 #define LIBWARP_MAJOR_VERSION 0
 #define LIBWARP_MINOR_VERSION 1
 #define LIBWARP_REVISION_VERSION 1
-#define LIBWARP_DEV_STAGE_VERSION 0xd1
-#define LIBWARP_DEV_STAGE_VERSION_STR "d1"
+#define LIBWARP_DEV_STAGE_VERSION 0xf1
+#define LIBWARP_DEV_STAGE_VERSION_STR "f1"
 
 #define LIBWARP_MAJOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MAJOR_VERSION)
 #define LIBWARP_MINOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MINOR_VERSION)

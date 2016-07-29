@@ -182,6 +182,7 @@ floor_inline_always static bool libwarp_wrap_gl_texture(shared_ptr<compute_image
 
 LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setup,
 								   const float delta,
+								   const bool clear_frame,
 								   const uint32_t color_texture,
 								   const uint32_t depth_texture,
 								   const uint32_t motion_texture,
@@ -210,8 +211,10 @@ LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setu
 	}
 	
 	// finally: exec kernels
-	// TODO: only clear first frame
-	auto err = run_warp_kernel<KERNEL_SCATTER_CLEAR>(camera_setup, delta);
+	auto err = LIBWARP_SUCCESS;
+	if(clear_frame) {
+		err = run_warp_kernel<KERNEL_SCATTER_CLEAR>(camera_setup, delta);
+	}
 	if(err == LIBWARP_SUCCESS) {
 		err = run_warp_kernel<KERNEL_SCATTER_DEPTH_PASS>(camera_setup, delta);
 	}
