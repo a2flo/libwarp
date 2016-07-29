@@ -91,6 +91,7 @@ enum class depth_type {
 
 #if !defined(DEFAULT_DEPTH_TYPE)
 #define DEFAULT_DEPTH_TYPE depth_type::normalized
+#define NATIVE_DEPTH_IMAGE 1
 #endif
 
 //////////////////////////////////////////
@@ -106,6 +107,13 @@ enum class depth_type {
 #define screen_check() if(global_id.x >= LIBWARP_SCREEN_WIDTH || global_id.y >= LIBWARP_SCREEN_HEIGHT) return
 #else
 #define screen_check() /* nop */
+#endif
+
+// choose between native depth buffer image type and single-channel color image type that emulates a depth buffer
+#if NATIVE_DEPTH_IMAGE == 1
+using depth_image_type = const_image_2d_depth<float>;
+#else
+using depth_image_type = const_image_2d<float1>;
 #endif
 
 namespace warp_camera {
@@ -129,15 +137,21 @@ namespace warp_camera {
 	
 	// reconstructs a 3D position from a 2D screen coordinate and its associated real world depth
 	static float3 reconstruct_position(const uint2& coord, const float& linear_depth) {
+		// originally this was: ((float2(coord) + 0.5f) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth
+		// -> simplified below (with constexpr terms forced to be computed at compile-time)
+		constexpr const auto ce_term_1 = inv_screen_size * float2(right_vec, up_vec);
+		constexpr const auto ce_term_2 = 2.0f * ce_term_1;
+		constexpr const auto ce_term_3 = ce_term_1 - float2(right_vec, up_vec);
 		return {
-			((float2(coord) + 0.5f) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
+			(float2(coord) * ce_term_2 + ce_term_3) * linear_depth,
 			-linear_depth
 		};
 	}
 	
 	// reprojects a 3D position back to 2D
 	static float2 reproject_position(const float3& position) {
-		const auto proj_dst_coord = (position.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -position.z;
+		constexpr const auto ce_term = float2 { 1.0f / right_vec, 1.0f / up_vec };
+		const auto proj_dst_coord = (position.xy * ce_term) / -position.z;
 		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size);
 	}
 	
@@ -175,15 +189,15 @@ namespace warp_camera {
 // format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
 floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 	// lookup into constant memory + 1 shift is faster than 3 ANDs + 3 cmps/sels
-	static constexpr const float3 signs_lookup[8] {
-		float3 { 1.0f, 1.0f, 1.0f },
-		float3 { 1.0f, 1.0f, -1.0f },
-		float3 { 1.0f, -1.0f, 1.0f },
-		float3 { 1.0f, -1.0f, -1.0f },
-		float3 { -1.0f, 1.0f, 1.0f },
-		float3 { -1.0f, 1.0f, -1.0f },
-		float3 { -1.0f, -1.0f, 1.0f },
-		float3 { -1.0f, -1.0f, -1.0f },
+	static constexpr const float3 signs_lookup[] {
+		{ 1.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, -1.0f },
+		{ 1.0f, -1.0f, 1.0f },
+		{ 1.0f, -1.0f, -1.0f },
+		{ -1.0f, 1.0f, 1.0f },
+		{ -1.0f, 1.0f, -1.0f },
+		{ -1.0f, -1.0f, 1.0f },
+		{ -1.0f, -1.0f, -1.0f },
 	};
 	const float3 signs = signs_lookup[encoded_motion >> 29u];
 	const uint3 shifted_motion {
@@ -203,7 +217,7 @@ floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motio
 // according to it's depth value (which is also returned) and motion vector, as well as the current time delta
 floor_inline_always static auto scatter(const int2& coord,
 										const float& delta,
-										const_image_2d_depth<float> img_depth,
+										depth_image_type img_depth,
 										const_image_2d<uint1> img_motion) {
 	// read rendered/input depth and linearize it (linear distance from the camera origin)
 	const auto linear_depth = warp_camera::linearize_depth(img_depth.read(coord));
@@ -226,7 +240,7 @@ floor_inline_always static auto scatter(const int2& coord,
 }
 
 //
-kernel void libwarp_warp_scatter_depth(const_image_2d_depth<float> img_depth,
+kernel void libwarp_warp_scatter_depth(depth_image_type img_depth,
 									   const_image_2d<uint1> img_motion,
 									   buffer<float> depth_buffer,
 									   param<float> delta) {
@@ -240,7 +254,7 @@ kernel void libwarp_warp_scatter_depth(const_image_2d_depth<float> img_depth,
 }
 //
 kernel void libwarp_warp_scatter_color(const_image_2d<float> img_color,
-									   const_image_2d_depth<float> img_depth,
+									   depth_image_type img_depth,
 									   const_image_2d<uint1> img_motion,
 									   image_2d<float4, true> img_out_color,
 									   buffer<const float> depth_buffer,
@@ -375,9 +389,9 @@ kernel void libwarp_warp_gather_forward(const_image_2d<float> img_color,
 }
 
 kernel void libwarp_warp_gather(const_image_2d<float> img_color,
-								const_image_2d_depth<float> img_depth,
+								depth_image_type img_depth,
 								const_image_2d<float> img_color_prev,
-								const_image_2d_depth<float> img_depth_prev,
+								depth_image_type img_depth_prev,
 								const_image_2d<uint1> img_motion_forward,
 								const_image_2d<uint1> img_motion_backward,
 								// packed <forward depth: fwd t-1 -> t (used here), backward depth: bwd t-1 -> t-2 (unused here)>
@@ -443,12 +457,7 @@ kernel void libwarp_warp_gather(const_image_2d<float> img_color,
 	if(fwd_valid && bwd_valid) {
 		if(depth_diff < epsilon_2) {
 			// case 1: both fwd and bwd are valid
-			if(err_fwd < err_bwd) {
-				color = proj_color_fwd;
-			}
-			else {
-				color = proj_color_bwd;
-			}
+			color = (err_fwd < err_bwd ? proj_color_fwd : proj_color_bwd);
 		}
 		else {
 			// case 2: select the one closer to the camera (occlusion)

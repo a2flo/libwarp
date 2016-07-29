@@ -139,7 +139,9 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 															(camera_setup->depth_type == LIBWARP_DEPTH_NORMALIZED ?
 															 "depth_type::normalized" :
 															 (camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ?
-															  "depth_type::z_div_w" : "depth_type::linear")));
+															  "depth_type::z_div_w" : "depth_type::linear")) +
+															" -DNATIVE_DEPTH_IMAGE=" +
+															(camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ? "0" : "1"));
 	if(program == nullptr) return { LIBWARP_COMPILATION_FAILURE, {} };
 	
 	// retrieve kernels

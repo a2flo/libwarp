@@ -56,10 +56,12 @@ in vec3 motion;
 // ...
 layout (location = 0) out vec4 frag_color;
 layout (location = 1) out uint motion_color;
+layout (location = 2) out float frag_depth; // only when using separate z/w depth attachment/image
 // ...
 
 void main() {
 	motion_color = encode_3d_motion(motion);
+	frag_depth = gl_FragCoord.z / gl_FragCoord.w; // only when using separate z/w depth attachment/image
 	// ...
 }
 
@@ -96,6 +98,7 @@ layout (location = 0) out vec4 frag_color;
 layout (location = 1) out uint motion_forward;
 layout (location = 2) out uint motion_backward;
 layout (location = 3) out vec2 motion_depth;
+layout (location = 4) out float frag_depth; // only when using separate z/w depth attachment/image
 // ...
 
 void main() {
@@ -103,6 +106,7 @@ void main() {
 	motion_backward = encode_2d_motion((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w));
 	motion_depth = vec2((motion_next.z / motion_next.w) - (motion_now.z / motion_now.w),
 						(motion_prev.z / motion_prev.w) - (motion_now.z / motion_now.w));
+	frag_depth = gl_FragCoord.z / gl_FragCoord.w; // only when using separate z/w depth attachment/image
 	// ...
 }
 
