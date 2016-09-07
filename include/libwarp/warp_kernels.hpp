@@ -69,8 +69,8 @@
 #endif
 #endif
 
-// screen origin is left bottom for opengl, left top for metal (and directx)
-#if !defined(FLOOR_COMPUTE_METAL)
+// screen origin is left bottom for opengl, left top for metal and vulkan
+#if !defined(FLOOR_COMPUTE_METAL) && !defined(FLOOR_COMPUTE_VULKAN)
 #define SCREEN_ORIGIN_LEFT_BOTTOM 1
 #else
 #define SCREEN_ORIGIN_LEFT_TOP 1
@@ -78,7 +78,7 @@
 
 // depth buffer types
 enum class depth_type {
-	// normalized in [0, 1], default for opengl and metal
+	// normalized in [0, 1], default for opengl/metal/vulkan
 	normalized,
 	// z/w depth
 	z_div_w,

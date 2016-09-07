@@ -311,10 +311,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 0.1.0;
+				CURRENT_PROJECT_VERSION = 0.1.2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DYLIB_COMPATIBILITY_VERSION = 0.1.0;
-				DYLIB_CURRENT_VERSION = 0.1.0;
+				DYLIB_COMPATIBILITY_VERSION = 0.1.2;
+				DYLIB_CURRENT_VERSION = 0.1.2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;
@@ -364,7 +364,7 @@
 				LD_DYLIB_INSTALL_NAME = "@rpath/$(PRODUCT_NAME).dylib";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Resources @loader_path/../Frameworks /Library/Frameworks /usr/local/lib /usr/lib /opt/floor/lib";
 				LLVM_VECTORIZE_LOOPS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -447,10 +447,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 0.1.0;
+				CURRENT_PROJECT_VERSION = 0.1.2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DYLIB_COMPATIBILITY_VERSION = 0.1.0;
-				DYLIB_CURRENT_VERSION = 0.1.0;
+				DYLIB_COMPATIBILITY_VERSION = 0.1.2;
+				DYLIB_CURRENT_VERSION = 0.1.2;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;
@@ -495,7 +495,7 @@
 				LD_DYLIB_INSTALL_NAME = "@rpath/$(PRODUCT_NAME).dylib";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Resources @loader_path/../Frameworks /Library/Frameworks /usr/local/lib /usr/lib /opt/floor/lib";
 				LLVM_VECTORIZE_LOOPS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
 					"-isystem",
@@ -662,8 +662,8 @@
 					PLATFORM_X64,
 				);
 				HEADER_SEARCH_PATHS = (
-					../,
-					ios/deps/include,
+					"$(inherited)",
+					/opt/floor/include/floor/ios/deps/include,
 				);
 				INSTALL_PATH = /usr/lib/;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
@@ -715,8 +715,8 @@
 					PLATFORM_X32,
 				);
 				HEADER_SEARCH_PATHS = (
-					../,
-					ios/deps/include,
+					"$(inherited)",
+					/opt/floor/include/floor/ios/deps/include,
 				);
 				INSTALL_PATH = /usr/lib/;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;

@@ -45,9 +45,9 @@ LIBWARP_ERROR_CODE libwarp_init() {
 		if(libwarp_state->dev_queue == nullptr) return LIBWARP_NO_QUEUE;
 		
 		// check if device supports 1024 work-items and tile-size of 32*32px (use it, if so)
-		if(libwarp_state->dev->max_work_group_size == 1024 &&
-		   libwarp_state->dev->max_work_group_item_sizes.x >= 32 &&
-		   libwarp_state->dev->max_work_group_item_sizes.y >= 32 &&
+		if(libwarp_state->dev->max_total_local_size == 1024 &&
+		   libwarp_state->dev->max_local_size.x >= 32 &&
+		   libwarp_state->dev->max_local_size.y >= 32 &&
 		   // host-compute tile size is fixed
 		   libwarp_state->ctx->get_compute_type() != COMPUTE_TYPE::HOST) {
 			libwarp_state->tile_size = { 32, 32 };

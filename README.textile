@@ -15,7 +15,7 @@ Image-space Warping library, implementing scatter-based warping, bidirectional g
 * sudo ln -sf /path/to/libwarp/bin /opt/libwarp/lib
 * alternatively: copy these files/folders there
 
-*Installation (Windows / VS):*
+*Installation (Windows / VS / MinGW/MSYS2):*
 * create a "%%ProgramFiles%%/libwarp" folder (C:/Program Files/libwarp)
 * inside this folder:
 ** copy the libwarp "include" folder there
