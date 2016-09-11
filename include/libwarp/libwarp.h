@@ -55,6 +55,8 @@ extern "C" {
 		LIBWARP_IMAGE_RELEASE_FAILURE	= 10,
 		//! failed to create scatter depth buffer
 		LIBWARP_DEPTH_BUFFER_FAILURE	= 11,
+		//! failed to initialize libfloor
+		LIBWARP_FLOOR_INIT_FAILURE		= 12,
 	} LIBWARP_ERROR_CODE;
 	
 	//! determines how depth values in the depth buffer should be interpreted

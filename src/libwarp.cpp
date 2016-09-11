@@ -29,7 +29,16 @@ LIBWARP_ERROR_CODE libwarp_init() {
 	static atomic<bool> did_init { false };
 	if(!did_init.exchange(true)) {
 		// TODO: need proper gl init for opencl
-		floor::init("", "data/", true, "config.json", true);
+		if(!floor::init(floor::init_state {
+			.call_path = "",
+			.data_path = "data/",
+			.app_name = "libwarp",
+			.console_only = true,
+			.renderer = floor::RENDERER::NONE,
+		})) {
+			return LIBWARP_FLOOR_INIT_FAILURE;
+		}
+		
 		atexit([] {
 			libwarp_state = nullptr;
 			floor::destroy();
