@@ -335,3 +335,94 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only(const libwarp_camera_setup* const
 	
 	return err;
 }
+
+
+LIBWARP_ERROR_CODE libwarp_scatter_floor(const libwarp_camera_setup* const camera_setup,
+										 const float delta,
+										 const bool clear_frame,
+										 shared_ptr<compute_image> color_texture,
+										 shared_ptr<compute_image> depth_texture,
+										 shared_ptr<compute_image> motion_texture,
+										 shared_ptr<compute_image> output_texture) {
+	LIBWARP_INIT_AND_LOCK;
+	
+	libwarp_state->scatter.color = color_texture;
+	libwarp_state->scatter.depth = depth_texture;
+	libwarp_state->scatter.motion = motion_texture;
+	libwarp_state->scatter.output = output_texture;
+	
+	//
+	const auto depth_buffer_size = sizeof(float) * camera_setup->screen_width * camera_setup->screen_height;
+	if(libwarp_state->scatter.depth_buffer == nullptr ||
+	   libwarp_state->scatter.depth_buffer->get_size() < depth_buffer_size) {
+		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(libwarp_state->dev, depth_buffer_size);
+		if(libwarp_state->scatter.depth_buffer == nullptr) {
+			return LIBWARP_DEPTH_BUFFER_FAILURE;
+		}
+	}
+	
+	// finally: exec kernels
+	auto err = LIBWARP_SUCCESS;
+	if(clear_frame) {
+		err = run_warp_kernel<KERNEL_SCATTER_CLEAR>(camera_setup, delta);
+	}
+	if(err == LIBWARP_SUCCESS) {
+		err = run_warp_kernel<KERNEL_SCATTER_DEPTH_PASS>(camera_setup, delta);
+	}
+	if(err == LIBWARP_SUCCESS) {
+		err = run_warp_kernel<KERNEL_SCATTER_COLOR_DEPTH_TEST>(camera_setup, delta);
+	}
+	if(err == LIBWARP_SUCCESS) {
+		err = run_warp_kernel<KERNEL_SCATTER_FIXUP>(camera_setup, delta);
+	}
+	return err;
+}
+
+LIBWARP_ERROR_CODE libwarp_gather_floor(const libwarp_camera_setup* const camera_setup,
+										const float delta,
+										shared_ptr<compute_image> color_current_texture,
+										shared_ptr<compute_image> depth_current_texture,
+										shared_ptr<compute_image> color_prev_texture,
+										shared_ptr<compute_image> depth_prev_texture,
+										shared_ptr<compute_image> motion_forward_texture,
+										shared_ptr<compute_image> motion_backward_texture,
+										shared_ptr<compute_image> motion_depth_forward_texture,
+										shared_ptr<compute_image> motion_depth_backward_texture,
+										shared_ptr<compute_image> output_texture) {
+	LIBWARP_INIT_AND_LOCK;
+	
+	// gather swaps images every other frame, so determine which set to use
+	uint32_t img_set = 0;
+	if(libwarp_state->gather.color[0] != nullptr &&
+	   libwarp_state->gather.color[0] != color_current_texture) {
+		img_set = 1; // use second set
+	}
+	
+	libwarp_state->gather.color[img_set] = color_current_texture;
+	libwarp_state->gather.depth[img_set] = depth_current_texture;
+	libwarp_state->gather.color[1u - img_set] = color_prev_texture;
+	libwarp_state->gather.depth[1u - img_set] = depth_prev_texture;
+	libwarp_state->gather.motion_depth[img_set] = motion_depth_forward_texture;
+	libwarp_state->gather.motion_depth[1u - img_set] = motion_depth_backward_texture;
+	libwarp_state->gather.motion[img_set * 2] = motion_forward_texture;
+	libwarp_state->gather.motion[img_set * 2 + 1] = motion_backward_texture;
+	libwarp_state->gather.output = output_texture;
+	
+	// exec kernel
+	return run_warp_kernel<KERNEL_GATHER_BIDIRECTIONAL>(camera_setup, delta, img_set);
+}
+
+LIBWARP_ERROR_CODE libwarp_gather_forward_only_floor(const libwarp_camera_setup* const camera_setup,
+													 const float delta,
+													 shared_ptr<compute_image> color_texture,
+													 shared_ptr<compute_image> motion_texture,
+													 shared_ptr<compute_image> output_texture) {
+	LIBWARP_INIT_AND_LOCK;
+	
+	libwarp_state->gather_forward.color = color_texture;
+	libwarp_state->gather_forward.motion = motion_texture;
+	libwarp_state->gather_forward.output = output_texture;
+
+	// exec kernel
+	return run_warp_kernel<KERNEL_GATHER_FORWARD_ONLY>(camera_setup, delta);
+}

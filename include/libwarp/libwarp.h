@@ -26,6 +26,11 @@
 #endif
 
 #if defined(__cplusplus)
+class compute_image;
+#include <memory>
+#endif
+
+#if defined(__cplusplus)
 extern "C" {
 #endif
 	
@@ -154,6 +159,43 @@ extern "C" {
 														 id <MTLTexture> output_texture);
 #endif
 	
+#if defined(__cplusplus)
+	//! scatter-based warping for use with any libfloor-based backend
+	//! 'clear_frame' signals if the current color data (from previous frame(s)) shoud be cleared or not
+	//! -> if the frame is not cleared, then empty pixels will retain the color from previous frames
+	//! NOTE: whether this uses forward-predicted motion or backwards-correct motion,
+	//!       solely depends on the data in the motion texture (not determined here)
+	LIBWARP_ERROR_CODE libwarp_scatter_floor(const libwarp_camera_setup* const camera_setup,
+											 const float delta,
+											 const bool clear_frame,
+											 std::shared_ptr<compute_image> color_texture,
+											 std::shared_ptr<compute_image> depth_texture,
+											 std::shared_ptr<compute_image> motion_texture,
+											 std::shared_ptr<compute_image> output_texture);
+	
+	//! scatter-based warping for use with any libfloor-based backend
+	//! NOTE: bidirectional warping
+	LIBWARP_ERROR_CODE libwarp_gather_floor(const libwarp_camera_setup* const camera_setup,
+											const float delta,
+											std::shared_ptr<compute_image> color_current_texture,
+											std::shared_ptr<compute_image> depth_current_texture,
+											std::shared_ptr<compute_image> color_prev_texture,
+											std::shared_ptr<compute_image> depth_prev_texture,
+											std::shared_ptr<compute_image> motion_forward_texture,
+											std::shared_ptr<compute_image> motion_backward_texture,
+											std::shared_ptr<compute_image> motion_depth_forward_texture,
+											std::shared_ptr<compute_image> motion_depth_backward_texture,
+											std::shared_ptr<compute_image> output_texture);
+	
+	//! scatter-based warping for use with any libfloor-based backend
+	//! NOTE: forward-only warping
+	LIBWARP_ERROR_CODE libwarp_gather_forward_only_floor(const libwarp_camera_setup* const camera_setup,
+														 const float delta,
+														 std::shared_ptr<compute_image> color_texture,
+														 std::shared_ptr<compute_image> motion_texture,
+														 std::shared_ptr<compute_image> output_texture);
+#endif
+	
 	//! optional helper function that can be used to pre-build a program for the specified camera setup
 	LIBWARP_ERROR_CODE libwarp_prebuild(const libwarp_camera_setup* const camera_setup);
 	
@@ -174,8 +216,8 @@ extern "C" {
 #define LIBWARP_MAJOR_VERSION 0
 #define LIBWARP_MINOR_VERSION 1
 #define LIBWARP_REVISION_VERSION 2
-#define LIBWARP_DEV_STAGE_VERSION 0xa1
-#define LIBWARP_DEV_STAGE_VERSION_STR "a1"
+#define LIBWARP_DEV_STAGE_VERSION 0xa2
+#define LIBWARP_DEV_STAGE_VERSION_STR "a2"
 
 #define LIBWARP_MAJOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MAJOR_VERSION)
 #define LIBWARP_MINOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MINOR_VERSION)
