@@ -170,6 +170,23 @@
 		};
 /* End PBXHeadersBuildPhase section */
 
+/* Begin PBXLegacyTarget section */
+		5C959F261E17046100EF28B3 /* libwarp_remote */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "floor_remote \"cd ~/libwarp_remote && export FLOOR_DEV=1 && export NO_COLOR=1 && if [ '${CONFIGURATION}' == 'Debug' ]; then ./build.sh $(ACTION) debug; else ./build.sh $(ACTION); fi\"";
+			buildConfigurationList = 5C959F291E17046100EF28B3 /* Build configuration list for PBXLegacyTarget "libwarp_remote" */;
+			buildPhases = (
+			);
+			buildToolPath = ssh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = libwarp_remote;
+			passBuildSettingsInEnvironment = 1;
+			productName = libwarp_remote;
+		};
+/* End PBXLegacyTarget section */
+
 /* Begin PBXNativeTarget section */
 		5C10915D17D114BC007F536E /* libwarp */ = {
 			isa = PBXNativeTarget;
@@ -214,6 +231,12 @@
 			attributes = {
 				LastUpgradeCheck = 0810;
 				ORGANIZATIONNAME = libwarp;
+				TargetAttributes = {
+					5C959F261E17046100EF28B3 = {
+						CreatedOnToolsVersion = 8.2;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = 5C10915917D114BC007F536E /* Build configuration list for PBXProject "libwarp" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -229,6 +252,7 @@
 			targets = (
 				5C10915D17D114BC007F536E /* libwarp */,
 				5CC2F77418678AAC0031E08D /* libwarp_ios */,
+				5C959F261E17046100EF28B3 /* libwarp_remote */,
 			);
 		};
 /* End PBXProject section */
@@ -291,7 +315,7 @@
 				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -379,6 +403,7 @@
 				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
+					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -401,9 +426,14 @@
 					"-Wthread-safety-verbose",
 					"-Wno-c++98-compat",
 					"-Wno-c++98-compat-pedantic",
+					"-Wno-c++11-compat",
+					"-Wno-c++11-compat-pedantic",
+					"-Wno-c++14-compat",
+					"-Wno-c++14-compat-pedantic",
+					"-Wno-gcc-compat",
+					"-Wno-gnu",
 					"-Wno-c99-extensions",
 					"-Wno-header-hygiene",
-					"-Wno-gnu",
 					"-Wno-documentation",
 					"-Wno-system-headers",
 					"-Wno-global-constructors",
@@ -429,7 +459,7 @@
 				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -511,6 +541,7 @@
 				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
+					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -533,9 +564,14 @@
 					"-Wthread-safety-verbose",
 					"-Wno-c++98-compat",
 					"-Wno-c++98-compat-pedantic",
+					"-Wno-c++11-compat",
+					"-Wno-c++11-compat-pedantic",
+					"-Wno-c++14-compat",
+					"-Wno-c++14-compat-pedantic",
+					"-Wno-gcc-compat",
+					"-Wno-gnu",
 					"-Wno-c99-extensions",
 					"-Wno-header-hygiene",
-					"-Wno-gnu",
 					"-Wno-documentation",
 					"-Wno-system-headers",
 					"-Wno-global-constructors",
@@ -582,7 +618,6 @@
 					"-iframework",
 					/Library/Frameworks,
 				);
-				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -623,7 +658,6 @@
 					"-iframework",
 					/Library/Frameworks,
 				);
-				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -633,6 +667,50 @@
 					"-framework",
 					Metal,
 				);
+			};
+			name = Release;
+		};
+		5C959F271E17046100EF28B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		5C959F281E17046100EF28B3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -763,6 +841,15 @@
 			buildConfigurations = (
 				5C10916317D114BC007F536E /* Debug */,
 				5C10916417D114BC007F536E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5C959F291E17046100EF28B3 /* Build configuration list for PBXLegacyTarget "libwarp_remote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C959F271E17046100EF28B3 /* Debug */,
+				5C959F281E17046100EF28B3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -25,4 +25,4 @@ Image-space Warping library, implementing scatter-based warping, bidirectional g
 * warp example in https://github.com/a2flo/floor_examples
 
 *snippets:*
-* GLSL and Metal snippets to render the required scatter/gather images can be found in the "etc/" folder
+* GLSL, Metal and libfloor compute/graphics C++ snippets to render the required scatter/gather images can be found in the "etc/" folder

@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2016 Florian Ziesche
+ *  Copyright (C) 2015 - 2017 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -242,14 +242,18 @@ floor_inline_always static auto scatter(const int2& coord,
 //
 kernel void libwarp_warp_scatter_depth(depth_image_type img_depth,
 									   const_image_2d<uint1> img_motion,
-									   buffer<float> depth_buffer,
+									   // NOTE: depth buffer is technically a float, but since Vulkan can't perform any
+									   //       fp atomics, we need to reinterpret this as uint32_t data
+									   //       note that this doesn't change the outcome of atomic_min (for values >= 0)
+									   buffer<uint32_t> depth_buffer,
 									   param<float> delta) {
 	screen_check();
 	
 	const auto scattered = scatter(global_id.xy, delta, img_depth, img_motion);
 	if(scattered.coord.x < LIBWARP_SCREEN_WIDTH &&
 	   scattered.coord.y < LIBWARP_SCREEN_HEIGHT) {
-		atomic_min(&depth_buffer[scattered.coord.y * LIBWARP_SCREEN_WIDTH + scattered.coord.x], scattered.linear_depth);
+		atomic_min(&depth_buffer[scattered.coord.y * LIBWARP_SCREEN_WIDTH + scattered.coord.x],
+				   *(uint32_t*)&scattered.linear_depth);
 	}
 }
 //
@@ -281,6 +285,16 @@ kernel void libwarp_warp_scatter_color(const_image_2d<float> img_color,
 // decodes the encoded input 2D motion vector
 // format: [16-bit y][16-bit x]
 static float2 decode_2d_motion(const uint32_t& encoded_motion) {
+#if defined(FLOOR_COMPUTE_VULKAN) || defined(FLOOR_COMPUTE_METAL)
+	auto ret = unpack_snorm_2x16(encoded_motion);
+#if defined(SCREEN_ORIGIN_LEFT_TOP) && !defined(FLOOR_COMPUTE_VULKAN)
+	// if the origin is at the top left, the y component points in the opposite/wrong direction
+	ret *= float2 { 0.5f, -0.5f };
+#else
+	ret *= float2 { 0.5f, 0.5f };
+#endif
+	return ret;
+#else
 	const union {
 		ushort2 us16;
 		short2 s16;
@@ -295,6 +309,7 @@ static float2 decode_2d_motion(const uint32_t& encoded_motion) {
 	return float2(shifted_motion.s16) * (0.5f / 32767.0f);
 #else // if the origin is at the top left, the y component points in the opposite/wrong direction
 	return float2(shifted_motion.s16) * float2 { 0.5f / 32767.0f, -0.5f / 32767.0f };
+#endif
 #endif
 }
 

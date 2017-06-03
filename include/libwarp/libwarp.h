@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2016 Florian Ziesche
+ *  Copyright (C) 2015 - 2017 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -216,8 +216,8 @@ extern "C" {
 #define LIBWARP_MAJOR_VERSION 0
 #define LIBWARP_MINOR_VERSION 1
 #define LIBWARP_REVISION_VERSION 2
-#define LIBWARP_DEV_STAGE_VERSION 0xa2
-#define LIBWARP_DEV_STAGE_VERSION_STR "a2"
+#define LIBWARP_DEV_STAGE_VERSION 0xa3
+#define LIBWARP_DEV_STAGE_VERSION_STR "a3"
 
 #define LIBWARP_MAJOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MAJOR_VERSION)
 #define LIBWARP_MINOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MINOR_VERSION)

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ##########################################
 # helper functions
@@ -35,33 +35,43 @@ verbose() {
 
 # if no CXX/CC are specified, try using clang++/clang
 if [ -z "${CXX}" ]; then
-	CXX=clang++
+	# try using clang++ directly (avoid any nasty wrappers)
+	if [ -n $(command -v /usr/bin/clang++) ]; then
+		CXX=/usr/bin/clang++
+	elif [ -n $(command -v /usr/local/bin/clang++) ]; then
+		CXX=/usr/local/bin/clang++
+	else
+		CXX=clang++
+	fi
 fi
 command -v ${CXX} >/dev/null 2>&1 || error "clang++ binary not found, please set CXX to a valid clang++ binary"
 
 if [ -z "${CC}" ]; then
-	CC=clang
+	# try using clang directly (avoid any nasty wrappers)
+	if [ -n $(command -v /usr/bin/clang) ]; then
+		CC=/usr/bin/clang++
+	elif [ -n $(command -v /usr/local/bin/clang) ]; then
+		CC=/usr/local/bin/clang
+	else
+		CC=clang
+	fi
 fi
 command -v ${CC} >/dev/null 2>&1 || error "clang binary not found, please set CC to a valid clang binary"
 
 # check if clang is the compiler, fail if not
 CXX_VERSION=$(${CXX} -v 2>&1)
-CXX17_CAPABLE=0
 if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
 	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
-		# apple xcode/llvm/clang versioning scheme -> at least 6.1.0 is required (ships with Xcode 6.3)
-		if [ $CLANG_MAJOR -lt 6 ] || [ $CLANG_MAJOR -eq 6 -a $CLANG_MINOR -lt 1 ]; then
-			error "at least Xcode 6.3 / clang/LLVM 6.1.0 is required to compile this project!"
+		# apple xcode/llvm/clang versioning scheme -> at least 8.1.0 is required (ships with Xcode 8.3)
+		if [ $CLANG_MAJOR -lt 8 ] || [ $CLANG_MAJOR -eq 8 -a $CLANG_MINOR -lt 1 ]; then
+			error "at least Xcode 8.3 / clang/LLVM 8.1.0 is required to compile this project!"
 		fi
 	else
-		# standard clang versioning scheme -> at least 3.5.0 is required
-		if [ $CLANG_MAJOR -lt 3 ] || [ $CLANG_MAJOR -eq 3 -a $CLANG_MINOR -lt 5 ]; then
-			error "at least clang 3.5.0 is required to compile this project!"
-		fi
-		if [ $CLANG_MAJOR -gt 3 ] || [ $CLANG_MAJOR -eq 3 -a $CLANG_MINOR -ge 9 ]; then
-			CXX17_CAPABLE=1
+		# standard clang versioning scheme -> at least 4.0 is required
+		if [ $CLANG_MAJOR -lt 4 ] || [ $CLANG_MAJOR -eq 4 -a $CLANG_MINOR -lt 0 ]; then
+			error "at least clang 4.0 is required to compile this project!"
 		fi
 	fi
 else
@@ -71,6 +81,8 @@ fi
 ##########################################
 # arg handling
 BUILD_MODE="release"
+BUILD_CLEAN=0
+BUILD_REBUILD=0
 BUILD_VERBOSE=0
 BUILD_JOB_COUNT=0
 
@@ -86,7 +98,6 @@ BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
 BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
 BUILD_CONF_POCL=0
 BUILD_CONF_LIBSTDCXX=0
-BUILD_CONF_CXX17=$((${FLOOR_CXX17}))
 BUILD_CONF_NATIVE=0
 
 BUILD_CONF_SANITIZERS=0
@@ -94,10 +105,6 @@ BUILD_CONF_ASAN=0
 BUILD_CONF_MSAN=0
 BUILD_CONF_TSAN=0
 BUILD_CONF_UBSAN=0
-
-if [ ${BUILD_CONF_CXX17} -gt ${CXX17_CAPABLE} ]; then
-	error "libfloor was compiled with C++17 support, but the current compiler is not C++17 capable"
-fi
 
 BUILD_ARCH_SIZE="x64"
 BUILD_ARCH=$(${CC} -dumpmachine | sed "s/-.*//")
@@ -122,6 +129,7 @@ for arg in "$@"; do
 			echo "	<default>          builds this project in release mode"
 			echo "	opt                builds this project in release mode + additional optimizations that take longer to compile (lto)"
 			echo "	debug              builds this project in debug mode"
+			echo "	rebuild            rebuild all source files of this project"
 			echo "	clean              cleans all build binaries and intermediate build files"
 			echo ""
 			echo "build configuration:"
@@ -153,8 +161,11 @@ for arg in "$@"; do
 		"debug")
 			BUILD_MODE="debug"
 			;;
+		"rebuild")
+			BUILD_REBUILD=1
+			;;
 		"clean")
-			BUILD_MODE="clean"
+			BUILD_CLEAN=1
 			;;
 		"-v")
 			BUILD_VERBOSE=1
@@ -212,6 +223,7 @@ TARGET_NAME=warp
 BUILD_PLATFORM=$(uname | tr [:upper:] [:lower:])
 BUILD_OS="unknown"
 BUILD_CPU_COUNT=1
+STAT_IS_BSD=0
 case ${BUILD_PLATFORM} in
 	"darwin")
 		if expr `uname -p` : "arm.*" >/dev/null; then
@@ -220,6 +232,7 @@ case ${BUILD_PLATFORM} in
 			BUILD_OS="osx"
 		fi
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
+		STAT_IS_BSD=1
 		;;
 	"linux")
 		BUILD_OS="linux"
@@ -229,10 +242,12 @@ case ${BUILD_PLATFORM} in
 	"freebsd")
 		BUILD_OS="freebsd"
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
+		STAT_IS_BSD=1
 		;;
 	"openbsd")
 		BUILD_OS="openbsd"
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
+		STAT_IS_BSD=1
 		;;
 	"cygwin"*)
 		# untested
@@ -249,6 +264,25 @@ case ${BUILD_PLATFORM} in
 		;;
 esac
 
+# runs the platform specific stat cmd to get the modification date of the specified file(s) as a unix timestamp
+file_mod_time() {
+	if [ ${STAT_IS_BSD} -gt 0 ]; then
+		echo $(stat -f "%m" $@)
+	else
+		echo $(stat -c "%Y" $@)
+	fi
+}
+
+# figure out which md5 cmd/binary can be used
+MD5_CMD=
+if [ $(command -v md5sum) ]; then
+	MD5_CMD=md5sum
+elif [ $(command -v md5) ]; then
+	MD5_CMD=md5
+else
+	error "neither md5 nor md5sum was found"
+fi
+
 # if an explicit job count was specified, overwrite BUILD_CPU_COUNT with it
 if [ ${BUILD_JOB_COUNT} -gt 0 ]; then
 	BUILD_CPU_COUNT=${BUILD_JOB_COUNT}
@@ -256,9 +290,12 @@ fi
 
 # set the target binary name (depends on the platform)
 TARGET_BIN_NAME=lib${TARGET_NAME}
+PCH_FILE_NAME="libwarp_prefix.pch"
+PCH_BIN_NAME=${TARGET_NAME}.pch
 # append 'd' for debug builds
 if [ $BUILD_MODE == "debug" ]; then
 	TARGET_BIN_NAME=${TARGET_BIN_NAME}d
+	PCH_BIN_NAME=${TARGET_NAME}d.pch
 fi
 
 # use *.a for all platforms
@@ -300,7 +337,27 @@ SRC_DIR="src"
 SRC_SUB_DIRS="."
 
 # build directory where all temporary files are stored (*.o, etc.)
-BUILD_DIR=build
+BUILD_DIR=
+if [ $BUILD_MODE == "debug" ]; then
+	BUILD_DIR=build/debug
+else
+	BUILD_DIR=build/release
+fi
+
+# current directory + escaped form
+CUR_DIR=$(pwd)
+ESC_CUR_DIR=$(echo ${CUR_DIR} | sed -E "s/\//\\\\\//g")
+
+# trigger full rebuild if build.sh is newer than the target bin or the target bin doesn't exist
+if [ ${BUILD_CLEAN} -eq 0 ]; then
+	if [ ! -f ${BIN_DIR}/${TARGET_BIN_NAME} ]; then
+		info "rebuilding because the target bin doesn't exist ..."
+		BUILD_REBUILD=1
+	elif [ $(file_mod_time build.sh) -gt $(file_mod_time ${BIN_DIR}/${TARGET_BIN_NAME}) ]; then
+		info "rebuilding because build.sh is newer than the target bin ..."
+		BUILD_REBUILD=1
+	fi
+fi
 
 ##########################################
 # library/dependency handling
@@ -505,6 +562,9 @@ else
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
 	fi
+	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
+		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openal-soft/include"
+	fi
 	INCLUDES="${INCLUDES} -iframework /Library/Frameworks"
 	
 	# build a shared/dynamic library
@@ -514,6 +574,9 @@ else
 	LDFLAGS="${LDFLAGS} -L/opt/X11/lib"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openssl/lib"
+	fi
+	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openal-soft/lib"
 	fi
 
 	# rpath voodoo
@@ -532,9 +595,11 @@ else
 	LDFLAGS="${LDFLAGS} -framework SDL2"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -lcrypto -lssl"
+		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openssl/lib"
 	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
-		LDFLAGS="${LDFLAGS} -framework OpenALSoft"
+		LDFLAGS="${LDFLAGS} -lopenal"
+		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openal-soft/lib"
 	fi
 	
 	# system frameworks
@@ -561,17 +626,15 @@ eval $(${CXX} -E -dM include/libwarp/libwarp.h 2>&1 | grep -E "define (LIBWARP_(
 eval $(${CXX} -E -dM -Iinclude src/build_version.hpp 2>&1 | grep -E "define LIBWARP_BUILD_VERSION " | sed -E "s/.*define (.*) [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 TARGET_VERSION="${LIBWARP_MAJOR_VERSION}.${LIBWARP_MINOR_VERSION}.${LIBWARP_REVISION_VERSION}"
 TARGET_FULL_VERSION="${TARGET_VERSION}${LIBWARP_DEV_STAGE_VERSION_STR}-${LIBWARP_BUILD_VERSION}"
-info "building ${TARGET_NAME} v${TARGET_FULL_VERSION} (${BUILD_MODE})"
+if [ ${BUILD_CLEAN} -eq 0 ]; then
+	info "building ${TARGET_NAME} v${TARGET_FULL_VERSION} (${BUILD_MODE})"
+fi
 
 ##########################################
 # flags
 
 # set up initial c++ and c flags
-if [ ${BUILD_CONF_CXX17} -eq 0 ]; then
-	CXXFLAGS="${CXXFLAGS} -std=gnu++14"
-else
-	CXXFLAGS="${CXXFLAGS} -std=gnu++1z"
-fi
+CXXFLAGS="${CXXFLAGS} -std=gnu++1z"
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
@@ -696,8 +759,11 @@ fi
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (c++14 with gnu and clang extensions is required)
-WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-compat -Wno-c99-extensions -Wno-c11-extensions"
+# remove std compat warnings (c++17 with gnu and clang extensions is required)
+WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
 # don't be too pedantic
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast"
@@ -773,34 +839,37 @@ for source_file in ${SRC_FILES}; do
 done
 
 # set flags depending on the build mode, or make a clean exit
-case ${BUILD_MODE} in
-	"release")
-		# release mode (default): add release mode flags/optimizations
-		CXXFLAGS="${CXXFLAGS} ${REL_FLAGS}"
-		CFLAGS="${CFLAGS} ${REL_FLAGS}"
-		;;
-	"release_opt")
-		# release mode + additional optimizations: add release mode and opt flags
-		CXXFLAGS="${CXXFLAGS} ${REL_FLAGS} ${REL_OPT_FLAGS}"
-		CFLAGS="${CFLAGS} ${REL_FLAGS} ${REL_OPT_FLAGS}"
-		LDFLAGS="${LDFLAGS} ${REL_OPT_LD_FLAGS}"
-		;;
-	"debug")
-		# debug mode: add debug flags
-		CXXFLAGS="${CXXFLAGS} ${DEBUG_FLAGS}"
-		CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
-		;;
-	"clean")
-		# delete the target binary and the complete build folder (all object files)
-		info "cleaning ..."
-		rm -f ${TARGET_BIN}
-		rm -Rf ${BUILD_DIR}
-		exit 0
-		;;
-	*)
-		error "unknown build mode: ${BUILD_MODE}"
-		;;
-esac
+if [ ${BUILD_CLEAN} -gt 0 ]; then
+	# delete the target binary and the complete build folder (all object files)
+	info "cleaning ${BUILD_MODE} ..."
+	rm -f ${TARGET_BIN}
+	rm -f ${TARGET_STATIC_BIN}
+	rm -f ${PCH_BIN_NAME}
+	rm -Rf ${BUILD_DIR}
+	exit 0
+else
+	case ${BUILD_MODE} in
+		"release")
+			# release mode (default): add release mode flags/optimizations
+			CXXFLAGS="${CXXFLAGS} ${REL_FLAGS}"
+			CFLAGS="${CFLAGS} ${REL_FLAGS}"
+			;;
+		"release_opt")
+			# release mode + additional optimizations: add release mode and opt flags
+			CXXFLAGS="${CXXFLAGS} ${REL_FLAGS} ${REL_OPT_FLAGS}"
+			CFLAGS="${CFLAGS} ${REL_FLAGS} ${REL_OPT_FLAGS}"
+			LDFLAGS="${LDFLAGS} ${REL_OPT_LD_FLAGS}"
+			;;
+		"debug")
+			# debug mode: add debug flags
+			CXXFLAGS="${CXXFLAGS} ${DEBUG_FLAGS}"
+			CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
+			;;
+		*)
+			error "unknown build mode: ${BUILD_MODE}"
+			;;
+	esac
+fi
 
 if [ ${BUILD_VERBOSE} -gt 1 ]; then
 	CXXFLAGS="${CXXFLAGS} -v"
@@ -817,6 +886,68 @@ if [ ${BUILD_VERBOSE} -gt 0 ]; then
 	info ""
 fi
 
+# this function checks if a source file needs rebuilding, based on its dependency list that has been generated in a previos build
+# -> this will check the modification date of the source files object/build file against all dependency files
+# -> if any is newer, this source file needs to be rebuild
+# -> will also rebuild if either the object/build file or dependency file don't exist, or the "rebuild" build mode is set
+needs_rebuild() {
+	source_file=$1
+
+	bin_file_name="${BUILD_DIR}/${source_file}.o"
+	if [ ${source_file} == ${PCH_FILE_NAME} ]; then
+		bin_file_name="${PCH_BIN_NAME}"
+	fi
+
+	rebuild_file=0
+	if [ ! -f ${BUILD_DIR}/${source_file}.d -o ! -f ${bin_file_name} -o ${BUILD_REBUILD} -gt 0 ]; then
+		info "rebuild because >${BUILD_DIR}/${source_file}.d< doesn't exist or BUILD_REBUILD $BUILD_REBUILD"
+		rebuild_file=1
+	else
+		dep_list=$(cat ${BUILD_DIR}/${source_file}.d | sed -E "s/deps://" | sed -E "s/ \\\\//" | sed -E "s/\.\.\/floor\//${ESC_CUR_DIR}\//g")
+		if [ "${dep_list}" ]; then
+			file_time=$(file_mod_time "${bin_file_name}")
+			dep_times=$(file_mod_time ${dep_list})
+			for dep_time in ${dep_times}; do
+				if [ $dep_time -gt $file_time ]; then
+					rebuild_file=1
+					break
+				fi
+			done
+		fi
+	fi
+	if [ $rebuild_file -gt 0 ]; then
+		echo "1"
+	fi
+}
+
+# build the precompiled header
+rebuild_pch=0
+rebuild_pch_info=$(needs_rebuild ${PCH_FILE_NAME})
+if [ ! -f "${PCH_BIN_NAME}" ]; then
+	info "building precompiled header ..."
+	rebuild_pch=1
+elif [ "${rebuild_pch_info}" ]; then
+	info "rebuilding precompiled header ..."
+	# -> kill old pch file if it exists
+	if [ -f "${PCH_BIN_NAME}" ]; then
+		rm ${PCH_BIN_NAME}
+	fi
+	rebuild_pch=1
+fi
+
+if [ $rebuild_pch -gt 0 ]; then
+	precomp_header_cmd="${CXX} ${CXXFLAGS} -x c++-header ${PCH_FILE_NAME} -Xclang -emit-pch -o ${PCH_BIN_NAME} -MD -MT deps -MF ${BUILD_DIR}/${PCH_FILE_NAME}.d"
+	verbose "${precomp_header_cmd}"
+	eval ${precomp_header_cmd}
+
+	# also signal that we need to rebuild all source code
+	BUILD_REBUILD=1
+fi
+
+if [ ! -f "${PCH_BIN_NAME}" ]; then
+	error "precompiled header compilation failed"
+fi
+
 # build the target
 export build_error=false
 trap build_error=true USR1
@@ -826,33 +957,37 @@ build_file() {
 	file_num=$2
 	file_count=$3
 	parent_pid=$4
-	info "building ${source_file} [${file_num}/${file_count}]"
-	case ${source_file} in
-		*".cpp")
-			build_cmd="${CXX} ${CXXFLAGS}"
-			;;
-		*".c")
-			build_cmd="${CC} ${CFLAGS}"
-			;;
-		*".mm")
-			build_cmd="${CXX} -x objective-c++ ${OBJCFLAGS} ${CXXFLAGS}"
-			;;
-		*".m")
-			build_cmd="${CC} -x objective-c ${OBJCFLAGS} ${CFLAGS}"
-			;;
-		*)
-			error "unknown source file ending: ${source_file}"
-			;;
-	esac
-	build_cmd="${build_cmd} -c ${source_file} -o ${BUILD_DIR}/${source_file}.o -MMD -MT deps -MF ${BUILD_DIR}/${source_file}.d"
-	verbose "${build_cmd}"
-	eval ${build_cmd}
 
-	# handle errors
-	ret_code=$?
-	if [ ${ret_code} -ne 0 ]; then
-		kill -USR1 ${parent_pid}
-		error "compilation failed (${source_file})"
+	rebuild_file=$(needs_rebuild ${source_file})
+	if [ "${rebuild_file}" ]; then
+		info "building ${source_file} [${file_num}/${file_count}]"
+		case ${source_file} in
+			*".cpp")
+				build_cmd="${CXX} -include-pch ${PCH_BIN_NAME} ${CXXFLAGS}"
+				;;
+			*".c")
+				build_cmd="${CC} ${CFLAGS}"
+				;;
+			*".mm")
+				build_cmd="${CXX} -x objective-c++ ${OBJCFLAGS} ${CXXFLAGS}"
+				;;
+			*".m")
+				build_cmd="${CC} -x objective-c ${OBJCFLAGS} ${CFLAGS}"
+				;;
+			*)
+				error "unknown source file ending: ${source_file}"
+				;;
+		esac
+		build_cmd="${build_cmd} -c ${source_file} -o ${BUILD_DIR}/${source_file}.o -MD -MT deps -MF ${BUILD_DIR}/${source_file}.d"
+		verbose "${build_cmd}"
+		eval ${build_cmd}
+
+		# handle errors
+		ret_code=$?
+		if [ ${ret_code} -ne 0 ]; then
+			kill -USR1 ${parent_pid}
+			error "compilation failed (${source_file})"
+		fi
 	fi
 }
 job_count() {
@@ -896,14 +1031,48 @@ info "waiting for build jobs to finish ..."
 wait
 
 # link
-info "linking ..."
 mkdir -p ${BIN_DIR}
 
-linker_cmd="${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}"
-verbose "${linker_cmd}"
-eval ${linker_cmd}
+relink_target=${BUILD_REBUILD}
+relink_static_target=${BUILD_REBUILD}
+relink_any=${BUILD_REBUILD}
+if [ ! -f ${TARGET_BIN} ]; then
+	relink_target=1
+	relink_any=1
+fi
+if [ ! -f ${TARGET_STATIC_BIN} ]; then
+	relink_static_target=1
+	relink_any=1
+fi
 
-verbose "${AR} rs ${TARGET_STATIC_BIN} ${OBJ_FILES}"
-${AR} rs ${TARGET_STATIC_BIN} ${OBJ_FILES}
+if [ $relink_any -eq 0 -a ${BUILD_REBUILD} -eq 0 ]; then
+	target_time=$(file_mod_time "${TARGET_BIN}")
+	static_target_time=$(file_mod_time "${TARGET_STATIC_BIN}")
+	obj_times=$(file_mod_time "${OBJ_FILES}")
+	for obj_time in ${obj_times}; do
+		if [ $obj_time -gt $target_time ]; then
+			relink_target=1
+		fi
+		if [ $obj_time -gt $static_target_time ]; then
+			relink_static_target=1
+		fi
+	done
+fi
+
+# don't create/link dll on mingw
+if [ $BUILD_OS != "mingw" ]; then
+	if [ $relink_target -gt 0  ]; then
+		info "linking ..."
+		linker_cmd="${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}"
+		verbose "${linker_cmd}"
+		eval ${linker_cmd}
+	fi
+fi
+
+if [ $relink_static_target -gt 0 ]; then
+	info "linking static ..."
+	verbose "${AR} rs ${TARGET_STATIC_BIN} ${OBJ_FILES}"
+	${AR} rs ${TARGET_STATIC_BIN} ${OBJ_FILES}
+fi
 
 info "built ${TARGET_NAME} v${TARGET_FULL_VERSION}"
