@@ -139,9 +139,9 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 															// camera setup
 															" -DLIBWARP_SCREEN_WIDTH=" + to_string(camera_setup->screen_width) +
 															" -DLIBWARP_SCREEN_HEIGHT=" + to_string(camera_setup->screen_height) +
-															" -DLIBWARP_SCREEN_FOV=" + to_string(camera_setup->field_of_view) +
-															" -DLIBWARP_NEAR_PLANE=" + to_string(camera_setup->near_plane) +
-															" -DLIBWARP_FAR_PLANE=" + to_string(camera_setup->far_plane) +
+															" -DLIBWARP_SCREEN_FOV=" + to_string(camera_setup->field_of_view) + "f" +
+															" -DLIBWARP_NEAR_PLANE=" + to_string(camera_setup->near_plane) + "f" +
+															" -DLIBWARP_FAR_PLANE=" + to_string(camera_setup->far_plane) + "f" +
 															" -DTILE_SIZE_X=" + to_string(libwarp_state->tile_size.x) +
 															" -DTILE_SIZE_Y=" + to_string(libwarp_state->tile_size.y) +
 															" -DDEFAULT_DEPTH_TYPE=" +
