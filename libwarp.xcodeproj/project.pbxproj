@@ -16,7 +16,6 @@
 		5C3D960D1C1C597C009C0586 /* libwarp_internal.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 5C3D960B1C1C597B009C0586 /* libwarp_internal.hpp */; };
 		5C3D960E1C1C597C009C0586 /* libwarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C3D960C1C1C597B009C0586 /* libwarp.cpp */; };
 		5C3D960F1C1C597C009C0586 /* libwarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C3D960C1C1C597B009C0586 /* libwarp.cpp */; };
-		5C7173A918D7144E00DDF097 /* OpenALSoft.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C7173A818D7144E00DDF097 /* OpenALSoft.framework */; };
 		5CA0C9B21BFCC0E900D4A417 /* libwarp.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CA0C9B11BFCC0E900D4A417 /* libwarp.mm */; };
 		5CA0C9B31BFCC0E900D4A417 /* libwarp.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CA0C9B11BFCC0E900D4A417 /* libwarp.mm */; };
 		5CBE41DE1B31D34900AE0E5F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CBE41DD1B31D34900AE0E5F /* QuartzCore.framework */; };
@@ -58,7 +57,6 @@
 			files = (
 				5CBE41DE1B31D34900AE0E5F /* QuartzCore.framework in Frameworks */,
 				5CE55CDF1B2754A6006C38E6 /* Metal.framework in Frameworks */,
-				5C7173A918D7144E00DDF097 /* OpenALSoft.framework in Frameworks */,
 				5C1091FB17D148D0007F536E /* ApplicationServices.framework in Frameworks */,
 				5C1091F917D148CB007F536E /* AppKit.framework in Frameworks */,
 				5C1091F717D148C5007F536E /* Cocoa.framework in Frameworks */,
@@ -229,7 +227,7 @@
 		5C10915617D114BC007F536E /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0810;
+				LastUpgradeCheck = 0930;
 				ORGANIZATIONNAME = libwarp;
 				TargetAttributes = {
 					5C959F261E17046100EF28B3 = {
@@ -243,6 +241,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 5C10915517D114BC007F536E;
@@ -315,20 +314,26 @@
 				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -395,7 +400,6 @@
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -451,20 +455,26 @@
 				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -525,7 +535,6 @@
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -582,19 +591,13 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"$(inherited)",
-					"-isystem",
-					/opt/X11/include,
 					"-isystem",
 					/usr/local/include,
 					"-isystem",
@@ -622,19 +625,12 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"$(inherited)",
-					"-isystem",
-					/opt/X11/include,
 					"-isystem",
 					/usr/local/include,
 					"-isystem",
@@ -711,22 +707,6 @@
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_OPENAL,
 				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/floor/include/floor/ios/deps/include,
@@ -767,18 +747,6 @@
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_OPENAL,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",

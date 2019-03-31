@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2017 Florian Ziesche
+ *  Copyright (C) 2015 - 2019 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -253,7 +253,7 @@ kernel void libwarp_warp_scatter_depth(depth_image_type img_depth,
 	if(scattered.coord.x < LIBWARP_SCREEN_WIDTH &&
 	   scattered.coord.y < LIBWARP_SCREEN_HEIGHT) {
 		atomic_min(&depth_buffer[scattered.coord.y * LIBWARP_SCREEN_WIDTH + scattered.coord.x],
-				   *(uint32_t*)&scattered.linear_depth);
+				   *(const uint32_t*)&scattered.linear_depth);
 	}
 }
 //
