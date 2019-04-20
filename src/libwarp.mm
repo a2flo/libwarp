@@ -29,7 +29,7 @@ floor_inline_always static bool libwarp_wrap_metal_texture(shared_ptr<compute_im
 														   id <MTLTexture> metal_texture,
 														   const bool read_write = false) {
 	if(img == nullptr || ((metal_image*)img.get())->get_metal_image() != metal_texture) {
-		img = make_shared<metal_image>(libwarp_state->dev, metal_texture, nullptr,
+		img = make_shared<metal_image>(*libwarp_state->dev_queue, metal_texture, nullptr,
 									   !read_write ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	return (img != nullptr);
@@ -54,7 +54,7 @@ LIBWARP_ERROR_CODE libwarp_scatter_metal(const libwarp_camera_setup* const camer
 	const auto depth_buffer_size = sizeof(float) * camera_setup->screen_width * camera_setup->screen_height;
 	if(libwarp_state->scatter.depth_buffer == nullptr ||
 	   libwarp_state->scatter.depth_buffer->get_size() < depth_buffer_size) {
-		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(libwarp_state->dev, depth_buffer_size);
+		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(*libwarp_state->dev_queue, depth_buffer_size);
 		if(libwarp_state->scatter.depth_buffer == nullptr) {
 			return LIBWARP_DEPTH_BUFFER_FAILURE;
 		}

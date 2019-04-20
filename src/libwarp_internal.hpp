@@ -39,7 +39,7 @@ floor_inline_always static constexpr size_t warp_kernel_count() {
 
 struct libwarp_state_struct {
 	shared_ptr<compute_context> ctx;
-	shared_ptr<compute_device> dev;
+	const compute_device* dev { nullptr };
 	shared_ptr<compute_queue> dev_queue;
 	uint2 tile_size { 32, 16 }; // == 512 work-items which should work everywhere
 	
@@ -104,7 +104,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 	switch(kernel_idx) {
 		case KERNEL_SCATTER_DEPTH_PASS: {
 			const float clear_depth = numeric_limits<float>::max();
-			libwarp_state->scatter.depth_buffer->fill(libwarp_state->dev_queue, &clear_depth, sizeof(clear_depth));
+			libwarp_state->scatter.depth_buffer->fill(*libwarp_state->dev_queue, &clear_depth, sizeof(clear_depth));
 			
 			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_DEPTH_PASS],
 											  global_work_size,

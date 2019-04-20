@@ -50,7 +50,7 @@ LIBWARP_ERROR_CODE libwarp_init() {
 		if(libwarp_state->ctx == nullptr) return LIBWARP_NO_CONTEXT;
 		libwarp_state->dev = libwarp_state->ctx->get_device(compute_device::TYPE::FASTEST);
 		if(libwarp_state->dev == nullptr) return LIBWARP_NO_DEVICE;
-		libwarp_state->dev_queue = libwarp_state->ctx->create_queue(libwarp_state->dev);
+		libwarp_state->dev_queue = libwarp_state->ctx->create_queue(*libwarp_state->dev);
 		if(libwarp_state->dev_queue == nullptr) return LIBWARP_NO_QUEUE;
 		
 		// check if device supports 1024 work-items and tile-size of 32*32px (use it, if so)
@@ -183,7 +183,7 @@ LIBWARP_ERROR_CODE libwarp_prebuild(const libwarp_camera_setup* const camera_set
 floor_inline_always static bool libwarp_wrap_gl_texture(shared_ptr<compute_image>& img, const uint32_t gl_texture,
 														const bool read_write = false) {
 	if(img == nullptr || img->get_opengl_object() != gl_texture) {
-		img = libwarp_state->ctx->wrap_image(libwarp_state->dev, gl_texture, GL_TEXTURE_2D,
+		img = libwarp_state->ctx->wrap_image(*libwarp_state->dev_queue, gl_texture, GL_TEXTURE_2D,
 											 !read_write ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	return (img != nullptr);
@@ -204,16 +204,16 @@ LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setu
 	if(!libwarp_wrap_gl_texture(libwarp_state->scatter.motion, motion_texture)) return LIBWARP_IMAGE_WRAP_FAILURE;
 	if(!libwarp_wrap_gl_texture(libwarp_state->scatter.output, output_texture, true)) return LIBWARP_IMAGE_WRAP_FAILURE;
 	
-	if(!libwarp_state->scatter.color->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->scatter.depth->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->scatter.motion->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->scatter.output->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->scatter.color->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->scatter.depth->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->scatter.motion->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->scatter.output->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
 	
 	//
 	const auto depth_buffer_size = sizeof(float) * camera_setup->screen_width * camera_setup->screen_height;
 	if(libwarp_state->scatter.depth_buffer == nullptr ||
 	   libwarp_state->scatter.depth_buffer->get_size() < depth_buffer_size) {
-		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(libwarp_state->dev, depth_buffer_size);
+		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(*libwarp_state->dev_queue, depth_buffer_size);
 		if(libwarp_state->scatter.depth_buffer == nullptr) {
 			return LIBWARP_DEPTH_BUFFER_FAILURE;
 		}
@@ -235,10 +235,10 @@ LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setu
 	}
 	// delay error reporting, so images can be properly released again
 	
-	if(!libwarp_state->scatter.color->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->scatter.depth->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->scatter.motion->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->scatter.output->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->scatter.color->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->scatter.depth->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->scatter.motion->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->scatter.output->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
 	
 	return err;
 }
@@ -277,34 +277,34 @@ LIBWARP_ERROR_CODE libwarp_gather(const libwarp_camera_setup* const camera_setup
 	if(!libwarp_wrap_gl_texture(libwarp_state->gather.output, output_texture, true)) return LIBWARP_IMAGE_WRAP_FAILURE;
 	
 	//
-	if(!libwarp_state->gather.color[0]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather.color[1]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather.depth[0]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather.depth[1]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather.motion_depth[0]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather.motion_depth[1]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.color[0]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.color[1]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.depth[0]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.depth[1]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.motion_depth[0]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.motion_depth[1]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
 	
-	if(!libwarp_state->gather.motion[img_set * 2]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather.motion[img_set * 2 + 1]->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.motion[img_set * 2]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.motion[img_set * 2 + 1]->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
 	
-	if(!libwarp_state->gather.output->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather.output->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
 	
 	// exec kernel
 	const auto err = run_warp_kernel<KERNEL_GATHER_BIDIRECTIONAL>(camera_setup, delta, img_set);
 	// delay error reporting, so images can be properly released again
 	
 	
-	if(!libwarp_state->gather.color[0]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather.color[1]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather.depth[0]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather.depth[1]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather.motion_depth[0]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather.motion_depth[1]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.color[0]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.color[1]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.depth[0]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.depth[1]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.motion_depth[0]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.motion_depth[1]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
 	
-	if(!libwarp_state->gather.motion[img_set * 2]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather.motion[img_set * 2 + 1]->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.motion[img_set * 2]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.motion[img_set * 2 + 1]->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
 	
-	if(!libwarp_state->gather.output->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather.output->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
 	
 	return err;
 }
@@ -321,17 +321,17 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only(const libwarp_camera_setup* const
 	if(!libwarp_wrap_gl_texture(libwarp_state->gather_forward.motion, motion_texture)) return LIBWARP_IMAGE_WRAP_FAILURE;
 	if(!libwarp_wrap_gl_texture(libwarp_state->gather_forward.output, output_texture, true)) return LIBWARP_IMAGE_WRAP_FAILURE;
 	
-	if(!libwarp_state->gather_forward.color->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather_forward.motion->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
-	if(!libwarp_state->gather_forward.output->acquire_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather_forward.color->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather_forward.motion->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	if(!libwarp_state->gather_forward.output->acquire_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_ACQUIRE_FAILURE;
 	
 	// exec kernel
 	const auto err = run_warp_kernel<KERNEL_GATHER_FORWARD_ONLY>(camera_setup, delta);
 	// delay error reporting, so images can be properly released again
 	
-	if(!libwarp_state->gather_forward.color->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather_forward.motion->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
-	if(!libwarp_state->gather_forward.output->release_opengl_object(libwarp_state->dev_queue)) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather_forward.color->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather_forward.motion->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
+	if(!libwarp_state->gather_forward.output->release_opengl_object(libwarp_state->dev_queue.get())) return LIBWARP_IMAGE_RELEASE_FAILURE;
 	
 	return err;
 }
@@ -355,7 +355,7 @@ LIBWARP_ERROR_CODE libwarp_scatter_floor(const libwarp_camera_setup* const camer
 	const auto depth_buffer_size = sizeof(float) * camera_setup->screen_width * camera_setup->screen_height;
 	if(libwarp_state->scatter.depth_buffer == nullptr ||
 	   libwarp_state->scatter.depth_buffer->get_size() < depth_buffer_size) {
-		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(libwarp_state->dev, depth_buffer_size);
+		libwarp_state->scatter.depth_buffer = libwarp_state->ctx->create_buffer(*libwarp_state->dev_queue, depth_buffer_size);
 		if(libwarp_state->scatter.depth_buffer == nullptr) {
 			return LIBWARP_DEPTH_BUFFER_FAILURE;
 		}
