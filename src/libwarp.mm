@@ -16,13 +16,15 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <floor/core/essentials.hpp>
+
+#if defined(__APPLE__) && defined(__OBJC__) && !defined(FLOOR_NO_METAL)
 #include <libwarp/libwarp.h>
 #include <floor/floor/floor.hpp>
 #include <floor/threading/thread_base.hpp>
 
 #include "libwarp_internal.hpp"
 
-#if defined(__APPLE__) && defined(__OBJC__)
 #include <floor/compute/metal/metal_image.hpp>
 
 floor_inline_always static bool libwarp_wrap_metal_texture(shared_ptr<compute_image>& img,
@@ -42,7 +44,7 @@ LIBWARP_ERROR_CODE libwarp_scatter_metal(const libwarp_camera_setup* const camer
 										 id <MTLTexture> depth_texture,
 										 id <MTLTexture> motion_texture,
 										 id <MTLTexture> output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
 	if(!libwarp_wrap_metal_texture(libwarp_state->scatter.color, color_texture)) return LIBWARP_IMAGE_WRAP_FAILURE;
@@ -88,7 +90,7 @@ LIBWARP_ERROR_CODE libwarp_gather_metal(const libwarp_camera_setup* const camera
 										id <MTLTexture> motion_depth_forward_texture,
 										id <MTLTexture> motion_depth_backward_texture,
 										id <MTLTexture> output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
 	// gather swaps images every other frame, so determine which set to use
@@ -119,7 +121,7 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only_metal(const libwarp_camera_setup*
 													 id <MTLTexture> color_texture,
 													 id <MTLTexture> motion_texture,
 													 id <MTLTexture> output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
 	if(!libwarp_wrap_metal_texture(libwarp_state->gather_forward.color, color_texture)) return LIBWARP_IMAGE_WRAP_FAILURE;

@@ -20,8 +20,9 @@
 #define __LIBWARP_H__
 
 #include <stdint.h>
+#include <floor/core/essentials.hpp>
 
-#if defined(__APPLE__) && defined(__OBJC__)
+#if defined(__APPLE__) && defined(__OBJC__) && !defined(FLOOR_NO_METAL)
 #include <Metal/MTLTexture.h>
 #endif
 
@@ -122,7 +123,7 @@ extern "C" {
 												   const uint32_t motion_texture,
 												   const uint32_t output_texture);
 	
-#if defined(__APPLE__) && defined(__OBJC__)
+#if defined(__APPLE__) && defined(__OBJC__) && !defined(FLOOR_NO_METAL)
 	//! scatter-based warping for use with Metal
 	//! 'clear_frame' signals if the current color data (from previous frame(s)) shoud be cleared or not
 	//! -> if the frame is not cleared, then empty pixels will retain the color from previous frames

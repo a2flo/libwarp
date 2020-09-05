@@ -71,7 +71,7 @@ LIBWARP_ERROR_CODE libwarp_init() {
 		
 		// init done
 		return LIBWARP_SUCCESS;
-	};
+	}
 	return LIBWARP_SUCCESS;
 }
 
@@ -176,7 +176,7 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 }
 
 LIBWARP_ERROR_CODE libwarp_prebuild(const libwarp_camera_setup* const camera_setup) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	return libwarp_build(camera_setup).first;
 }
 
@@ -196,7 +196,7 @@ LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setu
 								   const uint32_t depth_texture,
 								   const uint32_t motion_texture,
 								   const uint32_t output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
 	if(!libwarp_wrap_gl_texture(libwarp_state->scatter.color, color_texture)) return LIBWARP_IMAGE_WRAP_FAILURE;
@@ -254,7 +254,7 @@ LIBWARP_ERROR_CODE libwarp_gather(const libwarp_camera_setup* const camera_setup
 								  const uint32_t motion_depth_forward_texture,
 								  const uint32_t motion_depth_backward_texture,
 								  const uint32_t output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
 	// gather swaps images every other frame, so determine which set to use
@@ -314,7 +314,7 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only(const libwarp_camera_setup* const
 											   const uint32_t color_texture,
 											   const uint32_t motion_texture,
 											   const uint32_t output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
 	if(!libwarp_wrap_gl_texture(libwarp_state->gather_forward.color, color_texture)) return LIBWARP_IMAGE_WRAP_FAILURE;
@@ -344,7 +344,7 @@ LIBWARP_ERROR_CODE libwarp_scatter_floor(const libwarp_camera_setup* const camer
 										 shared_ptr<compute_image> depth_texture,
 										 shared_ptr<compute_image> motion_texture,
 										 shared_ptr<compute_image> output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	libwarp_state->scatter.color = color_texture;
 	libwarp_state->scatter.depth = depth_texture;
@@ -389,7 +389,7 @@ LIBWARP_ERROR_CODE libwarp_gather_floor(const libwarp_camera_setup* const camera
 										shared_ptr<compute_image> motion_depth_forward_texture,
 										shared_ptr<compute_image> motion_depth_backward_texture,
 										shared_ptr<compute_image> output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	// gather swaps images every other frame, so determine which set to use
 	uint32_t img_set = 0;
@@ -417,7 +417,7 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only_floor(const libwarp_camera_setup*
 													 shared_ptr<compute_image> color_texture,
 													 shared_ptr<compute_image> motion_texture,
 													 shared_ptr<compute_image> output_texture) {
-	LIBWARP_INIT_AND_LOCK;
+	LIBWARP_INIT_AND_LOCK
 	
 	libwarp_state->gather_forward.color = color_texture;
 	libwarp_state->gather_forward.motion = motion_texture;
