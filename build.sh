@@ -434,8 +434,9 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	LDFLAGS="${LDFLAGS} -rpath /opt/floor/lib"
 
 	# use PIC
+	# NOTE: -fno-pic -fno-pie is used at the front to disable/reset any defaults
 	LDFLAGS="${LDFLAGS} -fPIC"
-	COMMON_FLAGS="${COMMON_FLAGS} -Xclang -mrelocation-model -Xclang pic -Xclang -pic-level -Xclang 2"
+	COMMON_FLAGS="${COMMON_FLAGS} -fno-pic -fno-pie -fPIC"
 	
 	# pkg-config: required libraries/packages and optional libraries/packages
 	PACKAGES="sdl2"
