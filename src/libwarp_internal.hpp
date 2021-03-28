@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2019 Florian Ziesche
+ *  Copyright (C) 2015 - 2021 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -106,7 +106,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 			const float clear_depth = numeric_limits<float>::max();
 			libwarp_state->scatter.depth_buffer->fill(*libwarp_state->dev_queue, &clear_depth, sizeof(clear_depth));
 			
-			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_DEPTH_PASS],
+			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_DEPTH_PASS],
 											  global_work_size,
 											  libwarp_state->tile_size,
 											  libwarp_state->scatter.depth,
@@ -116,7 +116,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 			return LIBWARP_SUCCESS;
 		}
 		case KERNEL_SCATTER_COLOR_DEPTH_TEST: {
-			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_COLOR_DEPTH_TEST],
+			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_COLOR_DEPTH_TEST],
 											  global_work_size,
 											  libwarp_state->tile_size,
 											  libwarp_state->scatter.color,
@@ -128,7 +128,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 			return LIBWARP_SUCCESS;
 		}
 		case KERNEL_SCATTER_CLEAR: {
-			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_CLEAR],
+			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_CLEAR],
 											  global_work_size,
 											  libwarp_state->tile_size,
 											  libwarp_state->scatter.output,
@@ -136,14 +136,14 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 			return LIBWARP_SUCCESS;
 		}
 		case KERNEL_SCATTER_FIXUP: {
-			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_SCATTER_FIXUP],
+			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_FIXUP],
 											  global_work_size,
 											  libwarp_state->tile_size,
 											  libwarp_state->scatter.output);
 			return LIBWARP_SUCCESS;
 		}
 		case KERNEL_GATHER_FORWARD_ONLY: {
-			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_GATHER_FORWARD_ONLY],
+			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_GATHER_FORWARD_ONLY],
 											  global_work_size,
 											  libwarp_state->tile_size,
 											  libwarp_state->gather_forward.color,
@@ -153,7 +153,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 			return LIBWARP_SUCCESS;
 		}
 		case KERNEL_GATHER_BIDIRECTIONAL: {
-			libwarp_state->dev_queue->execute(prog.second->kernels[KERNEL_GATHER_BIDIRECTIONAL],
+			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_GATHER_BIDIRECTIONAL],
 											  global_work_size,
 											  libwarp_state->tile_size,
 											  libwarp_state->gather.color[img_set],
