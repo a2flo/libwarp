@@ -43,7 +43,7 @@ LIBWARP_ERROR_CODE libwarp_scatter_metal(const libwarp_camera_setup* const camer
 										 id <MTLTexture> color_texture,
 										 id <MTLTexture> depth_texture,
 										 id <MTLTexture> motion_texture,
-										 id <MTLTexture> output_texture) {
+										 id <MTLTexture> output_texture) REQUIRES(!libwarp_lock) {
 	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
@@ -89,7 +89,7 @@ LIBWARP_ERROR_CODE libwarp_gather_metal(const libwarp_camera_setup* const camera
 										id <MTLTexture> motion_backward_texture,
 										id <MTLTexture> motion_depth_forward_texture,
 										id <MTLTexture> motion_depth_backward_texture,
-										id <MTLTexture> output_texture) {
+										id <MTLTexture> output_texture) REQUIRES(!libwarp_lock) {
 	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
@@ -120,7 +120,7 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only_metal(const libwarp_camera_setup*
 													 const float delta,
 													 id <MTLTexture> color_texture,
 													 id <MTLTexture> motion_texture,
-													 id <MTLTexture> output_texture) {
+													 id <MTLTexture> output_texture) REQUIRES(!libwarp_lock) {
 	LIBWARP_INIT_AND_LOCK
 	
 	// wrap textures
