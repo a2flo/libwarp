@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -227,7 +227,8 @@
 		5C10915617D114BC007F536E /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1330;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1530;
 				ORGANIZATIONNAME = libwarp;
 				TargetAttributes = {
 					5C959F261E17046100EF28B3 = {
@@ -259,6 +260,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		5C10920917D1FB91007F536E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -268,7 +270,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = ./build_version.sh;
+			shellScript = "./build_version.sh\n";
 		};
 		5C47A5D4186B435000BE743A /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -345,6 +347,7 @@
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0.1.2;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DYLIB_COMPATIBILITY_VERSION = 0.1.2;
 				DYLIB_CURRENT_VERSION = 0.1.2;
@@ -396,7 +399,14 @@
 				INSTALL_PATH = "@rpath";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_DYLIB_INSTALL_NAME = "@rpath/$(PRODUCT_NAME).dylib";
-				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Resources @loader_path/../Frameworks /Library/Frameworks /usr/local/lib /usr/lib /opt/floor/lib";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Resources",
+					"@loader_path/../Frameworks",
+					/Library/Frameworks,
+					/usr/local/lib,
+					/usr/lib,
+					/opt/floor/lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
@@ -414,7 +424,6 @@
 				PRODUCT_NAME = libwarpd;
 				SDKROOT = macosx;
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
-				STRIP_STYLE = all;
 				VALID_ARCHS = x86_64;
 				WARNING_CFLAGS = (
 					"-Weverything",
@@ -492,6 +501,7 @@
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = YES;
 				CURRENT_PROJECT_VERSION = 0.1.2;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DYLIB_COMPATIBILITY_VERSION = 0.1.2;
 				DYLIB_CURRENT_VERSION = 0.1.2;
@@ -538,7 +548,14 @@
 				INSTALL_PATH = "@rpath";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_DYLIB_INSTALL_NAME = "@rpath/$(PRODUCT_NAME).dylib";
-				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Resources @loader_path/../Frameworks /Library/Frameworks /usr/local/lib /usr/lib /opt/floor/lib";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Resources",
+					"@loader_path/../Frameworks",
+					/Library/Frameworks,
+					/usr/local/lib,
+					/usr/lib,
+					/opt/floor/lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -555,7 +572,6 @@
 				PRODUCT_NAME = libwarp;
 				SDKROOT = macosx;
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
-				STRIP_STYLE = all;
 				VALID_ARCHS = x86_64;
 				WARNING_CFLAGS = (
 					"-Weverything",
@@ -599,12 +615,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				LIBRARY_SEARCH_PATHS = /opt/floor/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
@@ -629,11 +647,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = /opt/floor/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
@@ -662,6 +682,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUGGING_SYMBOLS = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -688,6 +709,7 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;

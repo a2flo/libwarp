@@ -31,7 +31,7 @@ floor_inline_always static bool libwarp_wrap_metal_texture(shared_ptr<compute_im
 														   id <MTLTexture> metal_texture,
 														   const bool read_write = false) {
 	if(img == nullptr || ((metal_image*)img.get())->get_metal_image() != metal_texture) {
-		img = make_shared<metal_image>(*libwarp_state->dev_queue, metal_texture, nullptr,
+		img = make_shared<metal_image>(*libwarp_state->dev_queue, metal_texture, std::span<uint8_t> {},
 									   !read_write ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	return (img != nullptr);
