@@ -811,6 +811,11 @@ if [ $BUILD_OS == "mingw" ]; then
 	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-ldl //g")
 fi
 
+# mingw: create import lib and export everything
+if [ $BUILD_OS == "mingw" ]; then
+	LDFLAGS="${LDFLAGS} -Wl,--export-all-symbols -Wl,-no-undefined -Wl,--enable-runtime-pseudo-reloc -Wl,--out-implib,bin/${TARGET_BIN_NAME}.a"
+fi
+
 # finally: add all common c++ and c flags/options
 CXXFLAGS="${CXXFLAGS} ${COMMON_FLAGS}"
 CFLAGS="${CFLAGS} ${COMMON_FLAGS}"
