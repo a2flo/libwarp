@@ -97,7 +97,8 @@ BUILD_CONF_HOST_COMPUTE=$((1 - $((${FLOOR_NO_HOST_COMPUTE}))))
 BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
 BUILD_CONF_VULKAN=$((1 - $((${FLOOR_NO_VULKAN}))))
 BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
-BUILD_CONF_VR=$((1 - $((${FLOOR_NO_VR}))))
+BUILD_CONF_OPENVR=$((1 - $((${FLOOR_NO_OPENVR}))))
+BUILD_CONF_OPENXR=$((1 - $((${FLOOR_NO_OPENXR}))))
 BUILD_CONF_LIBSTDCXX=0
 BUILD_CONF_NATIVE=0
 
@@ -230,7 +231,7 @@ case ${BUILD_PLATFORM} in
 		if expr `uname -p` : "arm.*" >/dev/null; then
 			BUILD_OS="ios"
 		else
-			BUILD_OS="osx"
+			BUILD_OS="macos"
 		fi
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
 		STAT_IS_BSD=1
@@ -267,11 +268,15 @@ esac
 
 # runs the platform specific stat cmd to get the modification date of the specified file(s) as a unix timestamp
 file_mod_time() {
+	# for whatever reason, I'm having trouble calling this directly with a large number of arguments
+	# -> use eval method instead, since it actually works ...
+	stat_cmd=""
 	if [ ${STAT_IS_BSD} -gt 0 ]; then
-		echo $(stat -f "%m" $@)
+		stat_cmd="stat -f \"%m\" $@"
 	else
-		echo $(stat -c "%Y" $@)
+		stat_cmd="stat -c \"%Y\" $@"
 	fi
+	echo $(eval $stat_cmd)
 }
 
 # figure out which md5 cmd/binary can be used
@@ -303,8 +308,8 @@ fi
 TARGET_STATIC_BIN_NAME=${TARGET_BIN_NAME}_static.a
 
 # file ending, depending on the platform we're building on
-# osx/ios -> .dylib
-if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
+# macOS/iOS -> .dylib
+if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	TARGET_BIN_NAME=${TARGET_BIN_NAME}.dylib
 # windows/mingw/cygwin -> .dll
 elif [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
@@ -316,13 +321,14 @@ else
 fi
 
 # disable metal support on non-iOS/macOS targets
-if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
+if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	BUILD_CONF_METAL=0
 fi
 
 # disable VR support on macOS/iOS targets
-if [ $BUILD_OS == "osx" -o $BUILD_OS != "ios" ]; then
-	BUILD_CONF_VR=0
+if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
+	BUILD_CONF_OPENVR=0
+	BUILD_CONF_OPENXR=0
 fi
 
 # try using lld if it is available, otherwise fall back to using clangs default
@@ -384,9 +390,9 @@ if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	LDFLAGS="${LDFLAGS} -stdlib=libstdc++"
 else
 	LDFLAGS="${LDFLAGS} -stdlib=libc++"
+	INCLUDES="${INCLUDES} -isystem /usr/local/include/c++/v1"
 fi
 LIBS="${LIBS}"
-INCLUDES="${INCLUDES} -isystem /usr/local/include/c++/v1"
 COMMON_FLAGS="${COMMON_FLAGS}"
 
 # if no AR is specified, set it to the default ar (used when creating a static lib)
@@ -426,8 +432,8 @@ else
 	LDFLAGS="${LDFLAGS} -lfloor"
 fi
 
-# use pkg-config (and some manual libs/includes) on all platforms except osx/ios
-if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
+# use pkg-config (and some manual libs/includes) on all platforms except macOS/iOS
+if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	# build a shared library + need to make kernel symbols visible for dlsym
 	LDFLAGS="${LDFLAGS} -shared"
 	if [ $BUILD_OS != "mingw" ]; then
@@ -450,6 +456,12 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		PACKAGES_OPT="${PACKAGES_OPT} openal"
+	fi
+	if [ ${BUILD_CONF_OPENVR} -gt 0 ]; then
+		PACKAGES_OPT="${PACKAGES_OPT} openvr"
+	fi
+	if [ ${BUILD_CONF_OPENXR} -gt 0 ]; then
+		PACKAGES_OPT="${PACKAGES_OPT} openxr"
 	fi
 
 	# TODO: error checking + check if libs exist
@@ -559,15 +571,18 @@ else
 	# aligned allocation is only available with macOS 10.14+, so disable it while we're still targeting 10.13+
 	COMMON_FLAGS="${COMMON_FLAGS} -fno-aligned-allocation"
 
-	# on osx/ios: assume everything is installed, pkg-config doesn't really exist
+	# on macOS/iOS: assume everything is installed, pkg-config doesn't really exist
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
 	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openal-soft/include"
 	fi
-	if [ ${BUILD_CONF_VR} -gt 0 ]; then
+	if [ ${BUILD_CONF_OPENVR} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/include/openvr"
+	fi
+	if [ ${BUILD_CONF_OPENXR} -gt 0 ]; then
+		INCLUDES="${INCLUDES} -isystem /usr/local/include/openxr"
 	fi
 	INCLUDES="${INCLUDES} -iframework /Library/Frameworks"
 	
@@ -604,6 +619,12 @@ else
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -lopenal"
 		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openal-soft/lib"
+	fi
+	if [ ${BUILD_CONF_OPENVR} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -lopenvr_api"
+	fi
+	if [ ${BUILD_CONF_OPENXR} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -lopenxr_loader"
 	fi
 	
 	# system frameworks
@@ -647,7 +668,7 @@ fi
 CFLAGS="${CFLAGS} -std=gnu11"
 
 OBJCFLAGS="${OBJCFLAGS} -fno-objc-exceptions"
-if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
+if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	OBJCFLAGS="${OBJCFLAGS} -fobjc-arc"
 fi
 
@@ -656,8 +677,8 @@ if [ $BUILD_OS == "mingw" ]; then
 	CXXFLAGS="${CXXFLAGS} -pthread"
 fi
 
-# arch handling (use -arch on osx/ios and -m64 everywhere else, except for mingw)
-if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
+# arch handling (use -arch on macOS/iOS and -m64 everywhere else, except for mingw)
+if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	case $BUILD_ARCH in
 		"arm"*)
 			COMMON_FLAGS="${COMMON_FLAGS} -arch arm64"
@@ -699,12 +720,12 @@ fi
 REL_OPT_FLAGS="-flto"
 REL_OPT_LD_FLAGS="-flto"
 
-# osx/ios: set min version
-if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
-	if [ $BUILD_OS == "osx" ]; then
+# macOS/iOS: set min version
+if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
+	if [ $BUILD_OS == "macos" ]; then
 		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.13"
 	else # ios
-		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=11.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=12.0"
 	fi
 	
 	# set lib version
@@ -774,16 +795,20 @@ COMMON_FLAGS="${COMMON_FLAGS} ${INCLUDES}"
 COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-I/-isystem /g")
 COMMON_FLAGS="${COMMON_FLAGS} -I/opt/floor/include -I${SRC_DIR} -Iinclude"
 
-# mingw sdl fixes
+# mingw fixes/workarounds
 if [ $BUILD_OS == "mingw" ]; then
 	# remove sdls main redirect, we want to use our own main
 	COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-Dmain=SDL_main//g")
+	# don't include "mingw64/include" directly
+	COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-isystem ([A-Za-z0-9_\-\:\/\.\(\) ]+)mingw64\/include //g")
 	# remove windows flag -> creates a separate cmd window + working iostream output
 	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-mwindows //g")
 	# remove unwanted -static-libgcc flag (this won't work and lead to linker errors!)
 	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-static-libgcc //g")
 	# remove unwanted -lm (this won't work and lead to linker errors!)
 	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-lm //g")
+	# remove unwanted -ldl (this doesn't exist on Windows)
+	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-ldl //g")
 fi
 
 # finally: add all common c++ and c flags/options
@@ -938,6 +963,14 @@ needs_rebuild() {
 	fi
 	if [ $rebuild_file -gt 0 ]; then
 		echo "1"
+	fi
+}
+handle_build_errors() {
+	# abort on build errors
+	if [ "${build_error}" == "true" ]; then
+		# wait until all build jobs have finished (all error output has been written)
+		wait
+		exit -1
 	fi
 }
 
