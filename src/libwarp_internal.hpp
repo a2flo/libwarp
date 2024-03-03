@@ -31,6 +31,10 @@ enum WARP_KERNEL : uint32_t {
 	KERNEL_SCATTER_FIXUP,
 	KERNEL_GATHER_FORWARD_ONLY,
 	KERNEL_GATHER_BIDIRECTIONAL,
+	KERNEL_DEBUG_DEPTH,
+	KERNEL_DEBUG_MOTION_2D,
+	KERNEL_DEBUG_MOTION_3D,
+	KERNEL_DEBUG_MOTION_DEPTH,
 	__MAX_WARP_KERNEL
 };
 floor_inline_always static constexpr size_t warp_kernel_count() {
@@ -70,6 +74,13 @@ struct libwarp_state_struct {
 		shared_ptr<compute_image> motion_depth[2];
 		shared_ptr<compute_image> output;
 	} gather;
+	
+	struct {
+		shared_ptr<compute_image> debug_output;
+		shared_ptr<compute_image> depth;
+		shared_ptr<compute_image> motion;
+		shared_ptr<compute_image> motion_depth;
+	} debug;
 };
 // contains all global state, can simply be cleared by setting to nullptr
 extern unique_ptr<libwarp_state_struct> libwarp_state;
@@ -95,82 +106,105 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 													   const uint32_t img_set = 0) {
 	// build program for this camera setup if it hasn't been build already
 	const auto prog = libwarp_build(camera_setup);
-	if(prog.first != LIBWARP_SUCCESS) return prog.first;
+	if (prog.first != LIBWARP_SUCCESS) {
+		return prog.first;
+	}
 	
 	// global work-size == round screen dim to tile size
 	const auto global_work_size = uint2(camera_setup->screen_width,
 										camera_setup->screen_height).rounded_next_multiple(libwarp_state->tile_size);
 	
-	switch(kernel_idx) {
+	compute_queue::execution_parameters_t exec_params {
+		.execution_dim = 2,
+		.global_work_size = global_work_size,
+		.local_work_size = libwarp_state->tile_size,
+		.args = {},
+		// all kernels must be blocking in here
+		.wait_until_completion = true,
+	};
+	switch (kernel_idx) {
 		case KERNEL_SCATTER_DEPTH_PASS: {
 			const float clear_depth = numeric_limits<float>::max();
 			libwarp_state->scatter.depth_buffer->fill(*libwarp_state->dev_queue, &clear_depth, sizeof(clear_depth));
 			
-			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_DEPTH_PASS],
-											  global_work_size,
-											  libwarp_state->tile_size,
-											  libwarp_state->scatter.depth,
-											  libwarp_state->scatter.motion,
-											  libwarp_state->scatter.depth_buffer,
-											  delta);
-			return LIBWARP_SUCCESS;
+			exec_params.args = {
+				libwarp_state->scatter.depth,
+				libwarp_state->scatter.motion,
+				libwarp_state->scatter.depth_buffer,
+				delta
+			};
+			break;
 		}
-		case KERNEL_SCATTER_COLOR_DEPTH_TEST: {
-			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_COLOR_DEPTH_TEST],
-											  global_work_size,
-											  libwarp_state->tile_size,
-											  libwarp_state->scatter.color,
-											  libwarp_state->scatter.depth,
-											  libwarp_state->scatter.motion,
-											  libwarp_state->scatter.output,
-											  libwarp_state->scatter.depth_buffer,
-											  delta);
-			return LIBWARP_SUCCESS;
-		}
-		case KERNEL_SCATTER_CLEAR: {
-			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_CLEAR],
-											  global_work_size,
-											  libwarp_state->tile_size,
-											  libwarp_state->scatter.output,
-											  float4 { 0.0f });
-			return LIBWARP_SUCCESS;
-		}
-		case KERNEL_SCATTER_FIXUP: {
-			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_SCATTER_FIXUP],
-											  global_work_size,
-											  libwarp_state->tile_size,
-											  libwarp_state->scatter.output);
-			return LIBWARP_SUCCESS;
-		}
-		case KERNEL_GATHER_FORWARD_ONLY: {
-			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_GATHER_FORWARD_ONLY],
-											  global_work_size,
-											  libwarp_state->tile_size,
-											  libwarp_state->gather_forward.color,
-											  libwarp_state->gather_forward.motion,
-											  libwarp_state->gather_forward.output,
-											  delta);
-			return LIBWARP_SUCCESS;
-		}
-		case KERNEL_GATHER_BIDIRECTIONAL: {
-			libwarp_state->dev_queue->execute(*prog.second->kernels[KERNEL_GATHER_BIDIRECTIONAL],
-											  global_work_size,
-											  libwarp_state->tile_size,
-											  libwarp_state->gather.color[img_set],
-											  libwarp_state->gather.depth[img_set],
-											  libwarp_state->gather.color[1u - img_set],
-											  libwarp_state->gather.depth[1u - img_set],
-											  libwarp_state->gather.motion[img_set * 2],
-											  libwarp_state->gather.motion[img_set * 2 + 1],
-											  libwarp_state->gather.motion_depth[img_set],
-											  libwarp_state->gather.motion_depth[1u - img_set],
-											  libwarp_state->gather.output,
-											  delta);
-			return LIBWARP_SUCCESS;
-		}
-		default: break;
+		case KERNEL_SCATTER_COLOR_DEPTH_TEST:
+			exec_params.args = {
+				libwarp_state->scatter.color,
+				libwarp_state->scatter.depth,
+				libwarp_state->scatter.motion,
+				libwarp_state->scatter.output,
+				libwarp_state->scatter.depth_buffer,
+				delta
+			};
+			break;
+		case KERNEL_SCATTER_CLEAR:
+			exec_params.args = {
+				libwarp_state->scatter.output,
+				float4 { 0.0f }
+			};
+			break;
+		case KERNEL_SCATTER_FIXUP:
+			exec_params.args = { libwarp_state->scatter.output };
+			break;
+		case KERNEL_GATHER_FORWARD_ONLY:
+			exec_params.args = {
+				libwarp_state->gather_forward.color,
+				libwarp_state->gather_forward.motion,
+				libwarp_state->gather_forward.output,
+				delta
+			};
+			break;
+		case KERNEL_GATHER_BIDIRECTIONAL:
+			exec_params.args = {
+				libwarp_state->gather.color[img_set],
+				libwarp_state->gather.depth[img_set],
+				libwarp_state->gather.color[1u - img_set],
+				libwarp_state->gather.depth[1u - img_set],
+				libwarp_state->gather.motion[img_set * 2],
+				libwarp_state->gather.motion[img_set * 2 + 1],
+				libwarp_state->gather.motion_depth[img_set],
+				libwarp_state->gather.motion_depth[1u - img_set],
+				libwarp_state->gather.output,
+				delta
+			};
+			break;
+		case KERNEL_DEBUG_DEPTH:
+			exec_params.args = {
+				libwarp_state->debug.depth,
+				libwarp_state->debug.debug_output,
+			};
+			break;
+		case KERNEL_DEBUG_MOTION_2D:
+			exec_params.args = {
+				libwarp_state->debug.motion,
+				libwarp_state->debug.debug_output,
+			};
+			break;
+		case KERNEL_DEBUG_MOTION_3D:
+			exec_params.args = {
+				libwarp_state->debug.motion,
+				libwarp_state->debug.debug_output,
+			};
+			break;
+		case KERNEL_DEBUG_MOTION_DEPTH:
+			exec_params.args = {
+				libwarp_state->debug.motion_depth,
+				libwarp_state->debug.debug_output,
+			};
+			break;
+		default:
+			return LIBWARP_NO_KERNEL;
 	}
-	floor_unreachable();
+	libwarp_state->dev_queue->execute_with_parameters(*prog.second->kernels[kernel_idx], exec_params);
+	return LIBWARP_SUCCESS;
 }
 
 #endif

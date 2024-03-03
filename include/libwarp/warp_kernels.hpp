@@ -69,11 +69,14 @@
 #endif
 #endif
 
-// screen origin is left bottom for opengl, left top for metal and vulkan
-#if !defined(FLOOR_COMPUTE_METAL) && !defined(FLOOR_COMPUTE_VULKAN)
-#define SCREEN_ORIGIN_LEFT_BOTTOM 1
-#else
+#if defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE)
+// work-around host (!device) compilation
 #define SCREEN_ORIGIN_LEFT_TOP 1
+#endif
+
+// always defined externally (since compute backend might not match rendering backend)
+#if !defined(SCREEN_ORIGIN_LEFT_BOTTOM) && !defined(SCREEN_ORIGIN_LEFT_TOP)
+#error "must either define SCREEN_ORIGIN_LEFT_BOTTOM or SCREEN_ORIGIN_LEFT_TOP"
 #endif
 
 // depth buffer types
@@ -82,9 +85,6 @@ enum class depth_type {
 	normalized,
 	// z/w depth
 	z_div_w,
-	// log depth, computed in software
-	// NOTE/TODO: not supported yet
-	log,
 	// linear depth [0, far-plane]
 	linear,
 };
@@ -104,7 +104,7 @@ enum class depth_type {
 
 // if tiles (work-group x/y sizes) overlap the screen size, a check is neccesary to ignore the overlapping work-items
 #if (((LIBWARP_SCREEN_WIDTH / TILE_SIZE_X) * TILE_SIZE_X) != LIBWARP_SCREEN_WIDTH) || (((LIBWARP_SCREEN_HEIGHT / TILE_SIZE_Y) * TILE_SIZE_Y) != LIBWARP_SCREEN_HEIGHT)
-#define screen_check() if(global_id.x >= LIBWARP_SCREEN_WIDTH || global_id.y >= LIBWARP_SCREEN_HEIGHT) return
+#define screen_check() if (global_id.x >= LIBWARP_SCREEN_WIDTH || global_id.y >= LIBWARP_SCREEN_HEIGHT) return
 #else
 #define screen_check() /* nop */
 #endif
@@ -158,26 +158,19 @@ namespace warp_camera {
 	// linearizes the input depth value according to the depth type and returns the real world depth value
 	template <depth_type type = DEFAULT_DEPTH_TYPE>
 	constexpr static float linearize_depth(const float& depth) {
-		if(type == depth_type::normalized) {
+		if (type == depth_type::normalized) {
 			// reading from the actual depth buffer which is normalized in [0, 1]
 			constexpr const float2 near_far_projection {
 				-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
 				(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
 			};
 			// special case: clear/full depth, assume this comes from a normalized sky box
-			if(depth == 1.0f) return 1.0f;
-			return near_far_projection.y / (depth - near_far_projection.x);
-		}
-		else if(type == depth_type::z_div_w) {
+			return (depth == 1.0f ? 1.0f : near_far_projection.y / (depth - near_far_projection.x));
+		} else if (type == depth_type::z_div_w) {
 			// depth is written as z/w in shader -> need to perform a small adjustment to account for near/far plane to get the real world depth
 			// (note that this error is almost imperceptible and could just be ignored)
 			return depth + near_far_plane.x - (depth * (near_far_plane.x / near_far_plane.y));
-		}
-		else if(type == depth_type::log) {
-			// TODO: implement this
-			return 0.0f;
-		}
-		else if(type == depth_type::linear) {
+		} else if (type == depth_type::linear) {
 			// already linear, just pass through
 			return depth;
 		}
@@ -250,8 +243,8 @@ kernel_2d() void libwarp_warp_scatter_depth(depth_image_type img_depth,
 	screen_check();
 	
 	const auto scattered = scatter(global_id.xy, delta, img_depth, img_motion);
-	if(scattered.coord.x < LIBWARP_SCREEN_WIDTH &&
-	   scattered.coord.y < LIBWARP_SCREEN_HEIGHT) {
+	if (scattered.coord.x < LIBWARP_SCREEN_WIDTH &&
+		scattered.coord.y < LIBWARP_SCREEN_HEIGHT) {
 		atomic_min(&depth_buffer[scattered.coord.y * LIBWARP_SCREEN_WIDTH + scattered.coord.x],
 				   *(const uint32_t*)&scattered.linear_depth);
 	}
@@ -267,13 +260,13 @@ kernel_2d() void libwarp_warp_scatter_color(const_image_2d<float> img_color,
 	
 	const auto coord = global_id.xy;
 	const auto scattered = scatter(coord, delta, img_depth, img_motion);
-	if(scattered.coord.x >= LIBWARP_SCREEN_WIDTH ||
-	   scattered.coord.y >= LIBWARP_SCREEN_HEIGHT) {
+	if (scattered.coord.x >= LIBWARP_SCREEN_WIDTH ||
+		scattered.coord.y >= LIBWARP_SCREEN_HEIGHT) {
 		return;
 	}
 	
 	const auto dst_depth = depth_buffer[scattered.coord.y * LIBWARP_SCREEN_WIDTH + scattered.coord.x];
-	if(scattered.linear_depth > dst_depth) {
+	if (scattered.linear_depth > dst_depth) {
 		return;
 	}
 	
@@ -285,32 +278,8 @@ kernel_2d() void libwarp_warp_scatter_color(const_image_2d<float> img_color,
 // decodes the encoded input 2D motion vector
 // format: [16-bit y][16-bit x]
 static float2 decode_2d_motion(const uint32_t& encoded_motion) {
-#if defined(FLOOR_COMPUTE_VULKAN) || defined(FLOOR_COMPUTE_METAL)
-	auto ret = unpack_snorm_2x16(encoded_motion);
-#if defined(SCREEN_ORIGIN_LEFT_TOP) && !defined(FLOOR_COMPUTE_VULKAN)
-	// if the origin is at the top left, the y component points in the opposite/wrong direction
-	ret *= float2 { 0.5f, -0.5f };
-#else
-	ret *= float2 { 0.5f, 0.5f };
-#endif
-	return ret;
-#else
-	const union {
-		ushort2 us16;
-		short2 s16;
-	} shifted_motion {
-		.us16 = {
-			encoded_motion & 0xFFFFu,
-			(encoded_motion >> 16u) & 0xFFFFu
-		}
-	};
-	// map [-32767, 32767] -> [-0.5, 0.5]
-#if defined(SCREEN_ORIGIN_LEFT_BOTTOM)
-	return float2(shifted_motion.s16) * (0.5f / 32767.0f);
-#else // if the origin is at the top left, the y component points in the opposite/wrong direction
-	return float2(shifted_motion.s16) * float2 { 0.5f / 32767.0f, -0.5f / 32767.0f };
-#endif
-#endif
+	// NOTE: this no longer needs to perform Y * -1 multiplication here
+	return unpack_snorm_2x16(encoded_motion) * 0.5f;
 }
 
 // gaussian blur helper functions (used in warp_gather_forward)
@@ -322,15 +291,15 @@ static constexpr uint32_t find_effective_n() {
 	constexpr const auto min_contribution = 1.0L / 255.0L;
 	
 	// start at the wanted tap count and go up by 2 "taps" if the row is unusable (and no point going beyond 64)
-	for(uint32_t count = tap_count; count < 64u; count += 2) {
+	for (uint32_t count = tap_count; count < 64u; count += 2) {
 		// / 2^N for this row
-		const long double sum_div = 1.0L / (long double)const_math::pow(2ull, (int)(count - 1));
-		for(uint32_t i = 0u; i <= count; ++i) {
+		const long double sum_div = 1.0L / (long double)const_math::pow(2ull, int(count - 1));
+		for (uint32_t i = 0u; i <= count; ++i) {
 			const auto coeff = const_math::binomial(count - 1u, i);
 			// is the coefficient large enough to produce a visible result?
-			if((sum_div * (long double)coeff) > min_contribution) {
+			if ((sum_div * (long double)coeff) > min_contribution) {
 				// if so, check how many usable values this row has now (should be >= desired tap count)
-				if((count - i * 2) < tap_count) {
+				if ((count - i * 2) < tap_count) {
 					break;
 				}
 				return count;
@@ -348,14 +317,18 @@ static constexpr auto compute_coefficients() {
 	// compute binomial coefficients and divide them by 2^(effective tap count - 1)
 	// this is basically computing a row in pascal's triangle, using all values (or the middle part) as coefficients
 	const auto effective_n = find_effective_n<tap_count>();
-	const long double sum_div = 1.0L / (long double)const_math::pow(2ull, (int)(effective_n - 1));
-	for(uint32_t i = 0u, k = (effective_n - tap_count) / 2u; i < tap_count; ++i, ++k) {
+	const long double sum_div = 1.0L / (long double)const_math::pow(2ull, int(effective_n - 1));
+	for (uint32_t i = 0u, k = (effective_n - tap_count) / 2u; i < tap_count; ++i, ++k) {
 		// coefficient_i = (n choose k) / 2^n
 		ret[i] = float(sum_div * (long double)const_math::binomial(effective_n - 1, k));
 	}
 	
 	return ret;
 }
+
+//! the amount of search iterations we perform in gather kernels
+//! TODO: this may be dependent on the screen size, needs more research
+static constexpr const uint32_t gather_search_iterations { 6u };
 
 kernel_2d() void libwarp_warp_gather_forward(const_image_2d<float> img_color,
 											 const_image_2d<uint1> img_motion,
@@ -367,10 +340,12 @@ kernel_2d() void libwarp_warp_gather_forward(const_image_2d<float> img_color,
 	const int2 coord { global_id.xy };
 	const float2 p_init = (float2(coord) + 0.5f) * warp_camera::inv_screen_size; // start at pixel center (this is p_t+alpha)
 	float2 p_fwd = p_init;
+	float4 fallback_color;
 #pragma unroll
-	for(uint32_t i = 0; i < 3; ++i) {
+	for (uint32_t i = 0; i < gather_search_iterations; ++i) {
 		const auto motion = decode_2d_motion(img_motion.read(p_fwd));
 		p_fwd = p_init - delta * motion;
+		fallback_color += (1.0f / float(gather_search_iterations)) * img_color.read_linear_repeat_mirrored(p_fwd);
 	}
 	
 #if 0 // just read the sample, ignoring any error
@@ -379,24 +354,24 @@ kernel_2d() void libwarp_warp_gather_forward(const_image_2d<float> img_color,
 	const auto motion_fwd = decode_2d_motion(img_motion.read(p_fwd));
 	const auto err_fwd = ((p_fwd + delta * motion_fwd - p_init).dot() +
 						  // account for out-of-bound access (-> large error so any checks will fail)
-						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1e10f : 0.0f));
+						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1.0e10f : 0.0f));
 	
-	const float epsilon_1 { 0.0025f };
+	const float epsilon_1 { 0.00025f };
 	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	float4 color;
-	if(err_fwd >= epsilon_1_sq) {
+	if (err_fwd >= epsilon_1_sq) {
 		// compute directional blur in the motion direction of the pixel
-		constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
-		constexpr const int overlap = TAP_COUNT / 2;
+		static constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
+		static constexpr const int overlap = TAP_COUNT / 2;
 		const auto dir = motion_fwd.normalized();
 		
 #pragma clang loop unroll_count(TAP_COUNT)
-		for(int i = -overlap; i <= overlap; ++i) {
+		for (int i = -overlap; i <= overlap; ++i) {
 			// TODO: use linear sampling / blur
 			color += coeffs[size_t(overlap + i)] * img_color.read(coord + int2(float(i) * dir));
 		}
-	}
-	else {
+		color = (color + fallback_color) * 0.5f;
+	} else {
 		color = img_color.read_linear(p_fwd);
 	}
 	img_out_color.write(coord, color);
@@ -423,19 +398,19 @@ kernel_2d() void libwarp_warp_gather(const_image_2d<float> img_color,
 	float2 p_fwd = p_init + delta * decode_2d_motion(img_motion_backward.read(p_init));
 	float2 p_bwd = p_init + (1.0f - delta) * decode_2d_motion(img_motion_forward.read(p_init));
 #pragma unroll
-	for(uint32_t i = 0; i < 3; ++i) {
+	for (uint32_t i = 0; i < gather_search_iterations; ++i) {
 		const auto motion = decode_2d_motion(img_motion_forward.read(p_fwd));
 		p_fwd = p_init - delta * motion;
 	}
 #pragma unroll
-	for(uint32_t i = 0; i < 3; ++i) {
+	for (uint32_t i = 0; i < gather_search_iterations; ++i) {
 		const auto motion = decode_2d_motion(img_motion_backward.read(p_bwd));
 		p_bwd = p_init - (1.0f - delta) * motion;
 	}
 	
 	// read fwd/bwd color for the found pixel locations
-	const auto color_fwd = img_color_prev.read_linear(p_fwd);
-	const auto color_bwd = img_color.read_linear(p_bwd);
+	const auto color_fwd = img_color_prev.read_linear_repeat_mirrored(p_fwd);
+	const auto color_bwd = img_color.read_linear_repeat_mirrored(p_bwd);
 	
 	// read final motion vector + depth (packed)
 	const auto motion_fwd = decode_2d_motion(img_motion_forward.read(p_fwd));
@@ -446,11 +421,11 @@ kernel_2d() void libwarp_warp_gather(const_image_2d<float> img_color,
 	// compute screen space error
 	const auto err_fwd = ((p_fwd + delta * motion_fwd - p_init).dot() +
 						  // account for out-of-bound access (-> large error so any checks will fail)
-						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1e10f : 0.0f));
+						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1.0e10f : 0.0f));
 	const auto err_bwd = ((p_bwd + (1.0f - delta) * motion_bwd - p_init).dot() +
-						  ((p_bwd < 0.0f).any() || (p_bwd > 1.0f).any() ? 1e10f : 0.0f));
+						  ((p_bwd < 0.0f).any() || (p_bwd > 1.0f).any() ? 1.0e10f : 0.0f));
 	// TODO: should have a more tangible epsilon, e.g. max pixel offset -> (max_offset / screen_size).max_element()
-	const float epsilon_1 { 0.0025f };
+	const float epsilon_1 { 0.00025f };
 	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	
 	// NOTE: scene depth type is dependent on the renderer (-> use the default), motion depth is always z/w
@@ -466,33 +441,29 @@ kernel_2d() void libwarp_warp_gather(const_image_2d<float> img_color,
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
 	// interpolation between fwd/bwd color and back-projection/forward-projection from the other color frame using the fwd/bwd motion
-	const auto proj_color_fwd = color_fwd.interpolated(img_color.read_linear(p_fwd + motion_fwd), delta);
-	const auto proj_color_bwd = img_color_prev.read_linear(p_bwd + motion_bwd).interpolated(color_bwd, delta);
+	const auto proj_color_fwd = color_fwd.interpolated(img_color.read_linear_repeat_mirrored(p_fwd + motion_fwd), delta);
+	const auto proj_color_bwd = img_color_prev.read_linear_repeat_mirrored(p_bwd + motion_bwd).interpolated(color_bwd, delta);
 	float4 color;
-	if(fwd_valid && bwd_valid) {
-		if(depth_diff < epsilon_2) {
+	if (fwd_valid && bwd_valid) {
+		if (depth_diff < epsilon_2) {
 			// case 1: both fwd and bwd are valid
 			color = (err_fwd < err_bwd ? proj_color_fwd : proj_color_bwd);
-		}
-		else {
+		} else {
 			// case 2: select the one closer to the camera (occlusion)
-			if(z_fwd < z_bwd) {
+			if (z_fwd < z_bwd) {
 				// depth from other frame
 				const auto z_fwd_other = (img_depth.read(p_fwd + motion_fwd) +
 										  (1.0f - delta) * img_motion_depth_backward.read(p_fwd + motion_fwd).y);
 				color = (abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
-			}
-			else { // bwd < fwd
+			} else { // bwd < fwd
 				const auto z_bwd_other = (img_depth_prev.read(p_bwd + motion_bwd) +
 										  delta * img_motion_depth_forward.read(p_bwd + motion_bwd).x);
 				color = (abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 			}
 		}
-	}
-	else if(fwd_valid) {
+	} else if (fwd_valid) {
 		color = color_fwd;
-	}
-	else if(bwd_valid) {
+	} else if (bwd_valid) {
 		color = color_bwd;
 	}
 	// case 3 / else: both are invalid -> just do a linear interpolation between the two
@@ -510,21 +481,23 @@ kernel_2d() void libwarp_single_px_fixup(image_2d<float4> warp_img) {
 	const auto color = warp_img.read(coord);
 	
 	// 0 if it hasn't been written (needs fixup), 1 if it has been written
-	if(color.w >= 1.0f) return;
+	if (color.w >= 1.0f) {
+		return;
+	}
 	
 	// sample pixels around
 	const float4 colors[] {
 		// read with offset if possible
-		warp_img.read(coord, int2 { 0, -1 }),
-		warp_img.read(coord, int2 { 1, 0 }),
-		warp_img.read(coord, int2 { 0, 1 }),
-		warp_img.read(coord, int2 { -1, 0 }),
+		warp_img.read_repeat_mirrored(coord, int2 { 0, -1 }),
+		warp_img.read_repeat_mirrored(coord, int2 { 1, 0 }),
+		warp_img.read_repeat_mirrored(coord, int2 { 0, 1 }),
+		warp_img.read_repeat_mirrored(coord, int2 { -1, 0 }),
 	};
 	
 	float3 avg;
 	float sum = 0.0f;
 #pragma unroll
-	for(const auto& col : colors) {
+	for (const auto& col : colors) {
 		// .w is 1.0f if valid, 0.0f if not (just multiply and add instead of checking)
 		avg += col.xyz * col.w;
 		sum += col.w;
@@ -539,6 +512,39 @@ kernel_2d() void libwarp_img_clear(image_2d<float4, true> img,
 								   param<float4> clear_color) {
 	screen_check();
 	img.write(global_id.xy, float4 { clear_color.xyz, 0.0f });
+}
+
+kernel_2d() void libwarp_debug_depth_output(const_image_2d_depth<float> depth_in,
+											image_2d<float4> output) {
+	auto depth = warp_camera::linearize_depth(depth_in.read(global_id.xy));
+	depth = math::fmod(depth, 1.0f);
+	output.write(global_id.xy, { depth, depth, depth, 1.0f });
+}
+
+kernel_2d() void libwarp_debug_motion_2d_output(const_image_2d<uint1> motion_in,
+												image_2d<float4> output) {
+	const auto motion = decode_2d_motion(motion_in.read(global_id.xy));
+	output.write(global_id.xy, { math::abs(motion.x), math::abs(motion.y), 0.0f, 1.0f });
+}
+
+kernel_2d() void libwarp_debug_motion_3d_output(const_image_2d<uint1> motion_in,
+												image_2d<float4> output) {
+	const auto encoded_motion = motion_in.read(global_id.xy);
+	auto motion = decode_3d_motion(encoded_motion);
+	motion /= 64.0f;
+	motion.abs();
+	output.write(global_id.xy, { motion.x, motion.y, motion.z, 1.0f });
+}
+
+kernel_2d() void libwarp_debug_motion_depth_output(const_image_2d<float2> motion_depth_in,
+												   image_2d<float4> output) {
+	auto motion_depth = motion_depth_in.read(global_id.xy);
+	
+	static constexpr const float2 near_far_plane { LIBWARP_NEAR_PLANE, LIBWARP_FAR_PLANE };
+	motion_depth = motion_depth + near_far_plane.x - (motion_depth * (near_far_plane.x / near_far_plane.y));
+	
+	motion_depth = (motion_depth % 0.0005f) * 2000.0f;
+	output.write(global_id.xy, { motion_depth.x, motion_depth.y, 0.0f, 1.0f });
 }
 
 #endif // FLOOR_COMPUTE

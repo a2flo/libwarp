@@ -86,6 +86,9 @@ extern "C" {
 		float near_plane;
 		float far_plane;
 		LIBWARP_DEPTH_TYPE depth_type;
+		//! when rendering with Metal/Vulkan: set this to true
+		//! when rendering with OpenGL: set this to false
+		bool is_screen_origin_top_left { true };
 	} libwarp_camera_setup;
 	
 	//! scatter-based warping for use with OpenGL and CUDA/OpenCL/Host-Compute
@@ -205,6 +208,26 @@ extern "C" {
 	
 	//! optional helper function that can be used to fully reset libwarp
 	void libwarp_reset();
+
+	//! for debugging purposes: renders the specified depth texture into the specified debug output with debug colors
+	LIBWARP_ERROR_CODE libwarp_debug_depth(const libwarp_camera_setup* const camera_setup,
+										   const uint32_t debug_output,
+										   const uint32_t depth_texture);
+
+	//! for debugging purposes: renders the specified 2D motion texture into the specified debug output with debug colors
+	LIBWARP_ERROR_CODE libwarp_debug_motion_2d(const libwarp_camera_setup* const camera_setup,
+											   const uint32_t debug_output,
+											   const uint32_t motion_texture);
+
+	//! for debugging purposes: renders the specified 3D motion texture into the specified debug output with debug colors
+	LIBWARP_ERROR_CODE libwarp_debug_motion_3d(const libwarp_camera_setup* const camera_setup,
+											   const uint32_t debug_output,
+											   const uint32_t motion_texture);
+
+	//! for debugging purposes: renders the specified motion depth texture into the specified debug output with debug colors
+	LIBWARP_ERROR_CODE libwarp_debug_motion_depth(const libwarp_camera_setup* const camera_setup,
+												  const uint32_t debug_output,
+												  const uint32_t motion_depth_texture);
 	
 #if defined(__cplusplus)
 }
@@ -215,10 +238,10 @@ extern "C" {
 
 // <major>.<minor>.<revision><dev_stage>
 #define LIBWARP_MAJOR_VERSION 0
-#define LIBWARP_MINOR_VERSION 1
-#define LIBWARP_REVISION_VERSION 2
-#define LIBWARP_DEV_STAGE_VERSION 0xa5
-#define LIBWARP_DEV_STAGE_VERSION_STR "a5"
+#define LIBWARP_MINOR_VERSION 2
+#define LIBWARP_REVISION_VERSION 0
+#define LIBWARP_DEV_STAGE_VERSION 0xa1
+#define LIBWARP_DEV_STAGE_VERSION_STR "a1"
 
 #define LIBWARP_MAJOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MAJOR_VERSION)
 #define LIBWARP_MINOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MINOR_VERSION)

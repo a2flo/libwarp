@@ -12,7 +12,6 @@
 		5C1091F717D148C5007F536E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F617D148C5007F536E /* Cocoa.framework */; };
 		5C1091F917D148CB007F536E /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F817D148CB007F536E /* AppKit.framework */; };
 		5C1091FB17D148D0007F536E /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091FA17D148D0007F536E /* ApplicationServices.framework */; };
-		5C1091FD17D148DB007F536E /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091FC17D148DB007F536E /* libxml2.dylib */; };
 		5C3D960D1C1C597C009C0586 /* libwarp_internal.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 5C3D960B1C1C597B009C0586 /* libwarp_internal.hpp */; };
 		5C3D960E1C1C597C009C0586 /* libwarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C3D960C1C1C597B009C0586 /* libwarp.cpp */; };
 		5C3D960F1C1C597C009C0586 /* libwarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C3D960C1C1C597B009C0586 /* libwarp.cpp */; };
@@ -24,7 +23,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5C02EE221A5B5EF800949E72 /* CUDA.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CUDA.framework; path = /Library/Frameworks/CUDA.framework; sourceTree = "<absolute>"; };
 		5C0686BC19C95FD800CF63C8 /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5C10915E17D114BC007F536E /* libwarpd.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libwarpd.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C1091F217D148B8007F536E /* OpenCL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenCL.framework; path = System/Library/Frameworks/OpenCL.framework; sourceTree = SDKROOT; };
@@ -32,11 +30,9 @@
 		5C1091F617D148C5007F536E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		5C1091F817D148CB007F536E /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		5C1091FA17D148D0007F536E /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
-		5C1091FC17D148DB007F536E /* libxml2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.dylib; path = usr/lib/libxml2.dylib; sourceTree = SDKROOT; };
 		5C2F83681B63FF1000B27BE3 /* metal */ = {isa = PBXFileReference; lastKnownFileType = folder; name = metal; path = ../../../../System/Library/PrivateFrameworks/GPUCompiler.framework/Versions/A/Libraries/lib/clang/3.5/include/metal; sourceTree = "<group>"; };
 		5C3D960B1C1C597B009C0586 /* libwarp_internal.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = libwarp_internal.hpp; path = src/libwarp_internal.hpp; sourceTree = "<group>"; };
 		5C3D960C1C1C597B009C0586 /* libwarp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = libwarp.cpp; path = src/libwarp.cpp; sourceTree = "<group>"; };
-		5C7173A818D7144E00DDF097 /* OpenALSoft.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenALSoft.framework; path = /Library/Frameworks/OpenALSoft.framework; sourceTree = "<absolute>"; };
 		5C782595187226DA00725EAF /* libwarp_prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libwarp_prefix.pch; sourceTree = "<group>"; };
 		5CA0C9AD1BFCBA7B00D4A417 /* libwarp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = libwarp.h; path = include/libwarp/libwarp.h; sourceTree = "<group>"; };
 		5CA0C9AE1BFCBA8A00D4A417 /* build_version.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = build_version.hpp; path = src/build_version.hpp; sourceTree = "<group>"; };
@@ -62,7 +58,6 @@
 				5C1091F717D148C5007F536E /* Cocoa.framework in Frameworks */,
 				5C1091F417D148B8007F536E /* OpenCL.framework in Frameworks */,
 				5C1091F517D148B8007F536E /* OpenGL.framework in Frameworks */,
-				5C1091FD17D148DB007F536E /* libxml2.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,7 +106,6 @@
 		5C1091FE17D148EF007F536E /* libs */ = {
 			isa = PBXGroup;
 			children = (
-				5C1091FC17D148DB007F536E /* libxml2.dylib */,
 				5CC97EE71A93808800611CF6 /* Metal.framework */,
 				5C2F83681B63FF1000B27BE3 /* metal */,
 				5CBE41DD1B31D34900AE0E5F /* QuartzCore.framework */,
@@ -121,8 +115,6 @@
 				5C1091F617D148C5007F536E /* Cocoa.framework */,
 				5C1091F217D148B8007F536E /* OpenCL.framework */,
 				5C1091F317D148B8007F536E /* OpenGL.framework */,
-				5C02EE221A5B5EF800949E72 /* CUDA.framework */,
-				5C7173A818D7144E00DDF097 /* OpenALSoft.framework */,
 				5CC2F77718678AAD0031E08D /* Foundation.framework */,
 			);
 			name = libs;
@@ -346,11 +338,11 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 0.1.2;
+				CURRENT_PROJECT_VERSION = 0.2.0;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DYLIB_COMPATIBILITY_VERSION = 0.1.2;
-				DYLIB_CURRENT_VERSION = 0.1.2;
+				DYLIB_COMPATIBILITY_VERSION = 0.2.0;
+				DYLIB_CURRENT_VERSION = 0.2.0;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;
@@ -500,11 +492,11 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 0.1.2;
+				CURRENT_PROJECT_VERSION = 0.2.0;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DYLIB_COMPATIBILITY_VERSION = 0.1.2;
-				DYLIB_CURRENT_VERSION = 0.1.2;
+				DYLIB_COMPATIBILITY_VERSION = 0.2.0;
+				DYLIB_CURRENT_VERSION = 0.2.0;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;

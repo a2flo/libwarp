@@ -62,13 +62,6 @@ LIBWARP_ERROR_CODE libwarp_init() {
 			libwarp_state->tile_size = { 32, 32 };
 		}
 		
-#if defined(__WINDOWS__)
-		// max work-item count with host-compute on windows is currently 64
-		if(libwarp_state->ctx->get_compute_type() == COMPUTE_TYPE::HOST) {
-			libwarp_state->tile_size = { 8, 8 };
-		}
-#endif
-		
 		// init done
 		return LIBWARP_SUCCESS;
 	}
@@ -102,6 +95,11 @@ void libwarp_cleanup() REQUIRES(!libwarp_lock) {
 	libwarp_state->gather.motion_depth[0] = nullptr;
 	libwarp_state->gather.motion_depth[1] = nullptr;
 	libwarp_state->gather.output = nullptr;
+	
+	libwarp_state->debug.debug_output = nullptr;
+	libwarp_state->debug.depth = nullptr;
+	libwarp_state->debug.motion = nullptr;
+	libwarp_state->debug.motion_depth = nullptr;
 }
 
 void libwarp_reset() REQUIRES(!libwarp_lock) {
@@ -150,7 +148,9 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 															 (camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ?
 															  "depth_type::z_div_w" : "depth_type::linear")) +
 															" -DNATIVE_DEPTH_IMAGE=" +
-															(camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ? "0" : "1"));
+															(camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ? "0" : "1") +
+															(camera_setup->is_screen_origin_top_left ?
+															 " -DSCREEN_ORIGIN_LEFT_TOP=1" : " -DSCREEN_ORIGIN_LEFT_BOTTOM=1"));
 	if(program == nullptr) return { LIBWARP_COMPILATION_FAILURE, {} };
 	
 	// retrieve kernels
@@ -162,6 +162,10 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 		"libwarp_single_px_fixup",
 		"libwarp_warp_gather_forward",
 		"libwarp_warp_gather",
+		"libwarp_debug_depth_output",
+		"libwarp_debug_motion_2d_output",
+		"libwarp_debug_motion_3d_output",
+		"libwarp_debug_motion_depth_output",
 	};
 	for(size_t i = 0; i < warp_kernel_count(); ++i) {
 		program->kernels[i] = program->program->get_kernel(kernel_names[i]);
@@ -425,4 +429,132 @@ LIBWARP_ERROR_CODE libwarp_gather_forward_only_floor(const libwarp_camera_setup*
 
 	// exec kernel
 	return run_warp_kernel<KERNEL_GATHER_FORWARD_ONLY>(camera_setup, delta);
+}
+
+LIBWARP_ERROR_CODE libwarp_debug_depth(const libwarp_camera_setup* const camera_setup,
+									   const uint32_t debug_output,
+									   const uint32_t depth_texture)
+REQUIRES(!libwarp_lock) {
+	LIBWARP_INIT_AND_LOCK
+	
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.debug_output, debug_output, true)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.depth, depth_texture, false)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	
+	if (!libwarp_state->debug.debug_output->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	if (!libwarp_state->debug.depth->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	
+	const auto err = run_warp_kernel<KERNEL_DEBUG_DEPTH>(camera_setup, 0.0f);
+	
+	if (!libwarp_state->debug.depth->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	if (!libwarp_state->debug.debug_output->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	
+	return err;
+}
+
+LIBWARP_ERROR_CODE libwarp_debug_motion_2d(const libwarp_camera_setup* const camera_setup,
+										   const uint32_t debug_output,
+										   const uint32_t motion_texture)
+REQUIRES(!libwarp_lock) {
+	LIBWARP_INIT_AND_LOCK
+	
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.debug_output, debug_output, true)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.motion, motion_texture, false)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	
+	if (!libwarp_state->debug.debug_output->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	if (!libwarp_state->debug.motion->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	
+	const auto err = run_warp_kernel<KERNEL_DEBUG_MOTION_2D>(camera_setup, 0.0f);
+	
+	if (!libwarp_state->debug.motion->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	if (!libwarp_state->debug.debug_output->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	
+	return err;
+}
+
+LIBWARP_ERROR_CODE libwarp_debug_motion_3d(const libwarp_camera_setup* const camera_setup,
+										   const uint32_t debug_output,
+										   const uint32_t motion_texture)
+REQUIRES(!libwarp_lock) {
+	LIBWARP_INIT_AND_LOCK
+	
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.debug_output, debug_output, true)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.motion, motion_texture, false)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	
+	if (!libwarp_state->debug.debug_output->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	if (!libwarp_state->debug.motion->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	
+	const auto err = run_warp_kernel<KERNEL_DEBUG_MOTION_3D>(camera_setup, 0.0f);
+	
+	if (!libwarp_state->debug.motion->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	if (!libwarp_state->debug.debug_output->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	
+	return err;
+}
+
+LIBWARP_ERROR_CODE libwarp_debug_motion_depth(const libwarp_camera_setup* const camera_setup,
+											  const uint32_t debug_output,
+											  const uint32_t motion_depth_texture)
+REQUIRES(!libwarp_lock) {
+	LIBWARP_INIT_AND_LOCK
+	
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.debug_output, debug_output, true)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	if (!libwarp_wrap_gl_texture(libwarp_state->debug.motion_depth, motion_depth_texture, false)) {
+		return LIBWARP_IMAGE_WRAP_FAILURE;
+	}
+	
+	if (!libwarp_state->debug.debug_output->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	if (!libwarp_state->debug.motion_depth->acquire_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_ACQUIRE_FAILURE;
+	}
+	
+	const auto err = run_warp_kernel<KERNEL_DEBUG_MOTION_DEPTH>(camera_setup, 0.0f);
+	
+	if (!libwarp_state->debug.motion_depth->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	if (!libwarp_state->debug.debug_output->release_opengl_object(libwarp_state->dev_queue.get())) {
+		return LIBWARP_IMAGE_RELEASE_FAILURE;
+	}
+	
+	return err;
 }
