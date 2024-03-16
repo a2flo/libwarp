@@ -46,6 +46,7 @@ struct libwarp_state_struct {
 	const compute_device* dev { nullptr };
 	shared_ptr<compute_queue> dev_queue;
 	uint2 tile_size { 32, 16 }; // == 512 work-items which should work everywhere
+	bool did_init_libfloor { false };
 	
 	//
 	struct camera_setup_program {

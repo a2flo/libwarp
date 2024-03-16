@@ -26,24 +26,30 @@ unique_ptr<libwarp_state_struct> libwarp_state;
 safe_mutex libwarp_lock;
 
 LIBWARP_ERROR_CODE libwarp_init() {
-	static atomic<bool> did_init { false };
-	if(!did_init.exchange(true)) {
-		// TODO: need proper gl init for opencl
-		if(!floor::init(floor::init_state {
-			.call_path = "",
-			.data_path = "data/",
-			.app_name = "libwarp",
-			.console_only = true,
-			.renderer = floor::RENDERER::NONE,
-		})) {
-			return LIBWARP_FLOOR_INIT_FAILURE;
+	if (!libwarp_state) {
+		const bool init_libfloor = !floor::is_initialized();
+		if (init_libfloor) {
+			// TODO: need proper gl init for opencl
+			if (!floor::init(floor::init_state {
+				.call_path = "",
+				.data_path = "data/",
+				.app_name = "libwarp",
+				.console_only = true,
+				.renderer = floor::RENDERER::NONE,
+			})) {
+				return LIBWARP_FLOOR_INIT_FAILURE;
+			}
 		}
 		
 		atexit([] {
+			const auto destroy_libfloor = (libwarp_state && libwarp_state->did_init_libfloor);
 			libwarp_state = nullptr;
-			floor::destroy();
+			if (destroy_libfloor) {
+				floor::destroy();
+			}
 		});
 		libwarp_state = make_unique<libwarp_state_struct>();
+		libwarp_state->did_init_libfloor = init_libfloor;
 		
 		// get compute context + device + create queue for it
 		libwarp_state->ctx = floor::get_compute_context();
@@ -70,7 +76,7 @@ LIBWARP_ERROR_CODE libwarp_init() {
 
 void libwarp_cleanup() REQUIRES(!libwarp_lock) {
 	GUARD(libwarp_lock);
-	if(libwarp_state == nullptr) return;
+	if (libwarp_state == nullptr) return;
 	
 	libwarp_state->programs.clear();
 	
@@ -102,9 +108,13 @@ void libwarp_cleanup() REQUIRES(!libwarp_lock) {
 	libwarp_state->debug.motion_depth = nullptr;
 }
 
-void libwarp_reset() REQUIRES(!libwarp_lock) {
+void libwarp_destroy() REQUIRES(!libwarp_lock) {
 	GUARD(libwarp_lock);
+	const auto destroy_libfloor = (libwarp_state && libwarp_state->did_init_libfloor);
 	libwarp_state = nullptr;
+	if (destroy_libfloor) {
+		floor::destroy();
+	}
 }
 
 pair<LIBWARP_ERROR_CODE, shared_ptr<libwarp_state_struct::camera_setup_program>>
