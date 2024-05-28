@@ -81,7 +81,7 @@
 
 // depth buffer types
 enum class depth_type {
-	// normalized in [0, 1], default for opengl/metal/vulkan
+	// normalized in [0, 1], default for Metal/Vulkan
 	normalized,
 	// z/w depth
 	z_div_w,

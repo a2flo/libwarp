@@ -3,12 +3,10 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5C1091F417D148B8007F536E /* OpenCL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F217D148B8007F536E /* OpenCL.framework */; };
-		5C1091F517D148B8007F536E /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F317D148B8007F536E /* OpenGL.framework */; };
 		5C1091F717D148C5007F536E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F617D148C5007F536E /* Cocoa.framework */; };
 		5C1091F917D148CB007F536E /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091F817D148CB007F536E /* AppKit.framework */; };
 		5C1091FB17D148D0007F536E /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1091FA17D148D0007F536E /* ApplicationServices.framework */; };
@@ -56,8 +54,6 @@
 				5C1091FB17D148D0007F536E /* ApplicationServices.framework in Frameworks */,
 				5C1091F917D148CB007F536E /* AppKit.framework in Frameworks */,
 				5C1091F717D148C5007F536E /* Cocoa.framework in Frameworks */,
-				5C1091F417D148B8007F536E /* OpenCL.framework in Frameworks */,
-				5C1091F517D148B8007F536E /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -230,7 +226,7 @@
 				};
 			};
 			buildConfigurationList = 5C10915917D114BC007F536E /* Build configuration list for PBXProject "libwarp" */;
-			compatibilityVersion = "Xcode 3.2";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -309,8 +305,7 @@
 				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_ASSIGN_ENUM = YES;
@@ -338,15 +333,15 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 0.2.0;
+				CURRENT_PROJECT_VERSION = 0.3.0;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DYLIB_COMPATIBILITY_VERSION = 0.2.0;
-				DYLIB_CURRENT_VERSION = 0.2.0;
+				DYLIB_COMPATIBILITY_VERSION = 0.3.0;
+				DYLIB_CURRENT_VERSION = 0.3.0;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_ENABLE_PASCAL_STRINGS = NO;
@@ -389,7 +384,7 @@
 					/opt/floor/include,
 				);
 				INSTALL_PATH = "@rpath";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_DYLIB_INSTALL_NAME = "@rpath/$(PRODUCT_NAME).dylib";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
@@ -399,7 +394,7 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -409,14 +404,13 @@
 				);
 				OTHER_LDFLAGS = (
 					"-framework",
-					SDL2,
+					SDL3,
 					"-lfloord",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.libwarpd;
 				PRODUCT_NAME = libwarpd;
 				SDKROOT = macosx;
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
-				VALID_ARCHS = x86_64;
 				WARNING_CFLAGS = (
 					"-Weverything",
 					"-Wthread-safety",
@@ -429,6 +423,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -440,6 +443,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -451,6 +455,7 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
 				);
 			};
 			name = Debug;
@@ -463,8 +468,7 @@
 				CLANG_ANALYZER_SECURITY_FLOATLOOPCOUNTER = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_ASSIGN_ENUM = YES;
@@ -492,15 +496,15 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = bin;
 				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 0.2.0;
+				CURRENT_PROJECT_VERSION = 0.3.0;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DYLIB_COMPATIBILITY_VERSION = 0.2.0;
-				DYLIB_CURRENT_VERSION = 0.2.0;
+				DYLIB_COMPATIBILITY_VERSION = 0.3.0;
+				DYLIB_CURRENT_VERSION = 0.3.0;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_ENABLE_PASCAL_STRINGS = NO;
 				GCC_FAST_MATH = YES;
@@ -538,7 +542,7 @@
 					/opt/floor/include,
 				);
 				INSTALL_PATH = "@rpath";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_DYLIB_INSTALL_NAME = "@rpath/$(PRODUCT_NAME).dylib";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
@@ -548,7 +552,7 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
@@ -557,14 +561,13 @@
 				);
 				OTHER_LDFLAGS = (
 					"-framework",
-					SDL2,
+					SDL3,
 					"-lfloor",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.libwarp;
 				PRODUCT_NAME = libwarp;
 				SDKROOT = macosx;
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
-				VALID_ARCHS = x86_64;
 				WARNING_CFLAGS = (
 					"-Weverything",
 					"-Wthread-safety",
@@ -577,6 +580,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -588,6 +600,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -599,6 +612,7 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
 				);
 			};
 			name = Release;
@@ -606,11 +620,12 @@
 		5C10916317D114BC007F536E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				LIBRARY_SEARCH_PATHS = /opt/floor/lib;
@@ -625,10 +640,6 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
-					"-framework",
 					Metal,
 				);
 				VALID_ARCHS = "x86_64 arm64";
@@ -638,11 +649,12 @@
 		5C10916417D114BC007F536E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				LIBRARY_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
@@ -655,10 +667,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
 					"-framework",
 					Metal,
 				);
@@ -717,13 +725,19 @@
 			buildSettings = {
 				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				DSTROOT = /tmp/libwarp_ios.dst;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENCL,
-					FLOOR_NO_OPENAL,
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -758,13 +772,19 @@
 			buildSettings = {
 				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				DSTROOT = /tmp/libwarp_ios.dst;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENCL,
-					FLOOR_NO_OPENAL,
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",

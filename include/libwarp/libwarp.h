@@ -53,7 +53,7 @@ extern "C" {
 		LIBWARP_NO_KERNEL				= 6,
 		//! specified screen width/height are invalid
 		LIBWARP_INVALID_SCREEN_DIM		= 7,
-		//! failed to wrap an opengl or metal texture
+		//! failed to wrap a Metal/Vulkan texture
 		LIBWARP_IMAGE_WRAP_FAILURE		= 8,
 		//! failed to acquire an image for compute use
 		LIBWARP_IMAGE_ACQUIRE_FAILURE	= 9,
@@ -67,7 +67,7 @@ extern "C" {
 	
 	//! determines how depth values in the depth buffer should be interpreted
 	typedef enum {
-		//! normalized in [0, 1], default for OpenGL and Metal
+		//! normalized in [0, 1], default for Metal/Vulkan
 		LIBWARP_DEPTH_NORMALIZED,
 		//! z/w depth (manually written to a R32F texture in the shader)
 		LIBWARP_DEPTH_Z_DIV_W,
@@ -87,44 +87,8 @@ extern "C" {
 		float far_plane;
 		LIBWARP_DEPTH_TYPE depth_type;
 		//! when rendering with Metal/Vulkan: set this to true
-		//! when rendering with OpenGL: set this to false
 		bool is_screen_origin_top_left { true };
 	} libwarp_camera_setup;
-	
-	//! scatter-based warping for use with OpenGL and CUDA/OpenCL/Host-Compute
-	//! 'clear_frame' signals if the current color data (from previous frame(s)) should be cleared or not
-	//! -> if the frame is not cleared, then empty pixels will retain the color from previous frames
-	//! NOTE: whether this uses forward-predicted motion or backwards-correct motion,
-	//!       solely depends on the data in the motion texture (not determined here)
-	LIBWARP_ERROR_CODE libwarp_scatter(const libwarp_camera_setup* const camera_setup,
-									   const float delta,
-									   const bool clear_frame,
-									   const uint32_t color_texture,
-									   const uint32_t depth_texture,
-									   const uint32_t motion_texture,
-									   const uint32_t output_texture);
-	
-	//! gather-based warping for use with OpenGL and CUDA/OpenCL/Host-Compute
-	//! NOTE: bidirectional warping
-	LIBWARP_ERROR_CODE libwarp_gather(const libwarp_camera_setup* const camera_setup,
-									  const float delta,
-									  const uint32_t color_current_texture,
-									  const uint32_t depth_current_texture,
-									  const uint32_t color_prev_texture,
-									  const uint32_t depth_prev_texture,
-									  const uint32_t motion_forward_texture,
-									  const uint32_t motion_backward_texture,
-									  const uint32_t motion_depth_forward_texture,
-									  const uint32_t motion_depth_backward_texture,
-									  const uint32_t output_texture);
-	
-	//! gather-based warping for use with OpenGL and CUDA/OpenCL/Host-Compute
-	//! NOTE: forward-only warping
-	LIBWARP_ERROR_CODE libwarp_gather_forward_only(const libwarp_camera_setup* const camera_setup,
-												   const float delta,
-												   const uint32_t color_texture,
-												   const uint32_t motion_texture,
-												   const uint32_t output_texture);
 	
 #if defined(__APPLE__) && defined(__OBJC__) && !defined(FLOOR_NO_METAL)
 	//! scatter-based warping for use with Metal
@@ -209,26 +173,6 @@ extern "C" {
 	//! deinitializes and destroys all libwarp state
 	void libwarp_destroy();
 	
-	//! for debugging purposes: renders the specified depth texture into the specified debug output with debug colors
-	LIBWARP_ERROR_CODE libwarp_debug_depth(const libwarp_camera_setup* const camera_setup,
-										   const uint32_t debug_output,
-										   const uint32_t depth_texture);
-
-	//! for debugging purposes: renders the specified 2D motion texture into the specified debug output with debug colors
-	LIBWARP_ERROR_CODE libwarp_debug_motion_2d(const libwarp_camera_setup* const camera_setup,
-											   const uint32_t debug_output,
-											   const uint32_t motion_texture);
-
-	//! for debugging purposes: renders the specified 3D motion texture into the specified debug output with debug colors
-	LIBWARP_ERROR_CODE libwarp_debug_motion_3d(const libwarp_camera_setup* const camera_setup,
-											   const uint32_t debug_output,
-											   const uint32_t motion_texture);
-
-	//! for debugging purposes: renders the specified motion depth texture into the specified debug output with debug colors
-	LIBWARP_ERROR_CODE libwarp_debug_motion_depth(const libwarp_camera_setup* const camera_setup,
-												  const uint32_t debug_output,
-												  const uint32_t motion_depth_texture);
-	
 #if defined(__cplusplus)
 }
 #endif
@@ -238,10 +182,10 @@ extern "C" {
 
 // <major>.<minor>.<revision><dev_stage>
 #define LIBWARP_MAJOR_VERSION 0
-#define LIBWARP_MINOR_VERSION 2
+#define LIBWARP_MINOR_VERSION 3
 #define LIBWARP_REVISION_VERSION 0
-#define LIBWARP_DEV_STAGE_VERSION 0xf1
-#define LIBWARP_DEV_STAGE_VERSION_STR "f1"
+#define LIBWARP_DEV_STAGE_VERSION 0xa1
+#define LIBWARP_DEV_STAGE_VERSION_STR "a1"
 
 #define LIBWARP_MAJOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MAJOR_VERSION)
 #define LIBWARP_MINOR_VERSION_STR LIBWARP_VERSION_EVAL(LIBWARP_MINOR_VERSION)
