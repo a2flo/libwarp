@@ -775,7 +775,7 @@ COMMON_FLAGS="${COMMON_FLAGS} -fdiagnostics-show-note-include-stack -fmessage-le
 COMMON_FLAGS="${COMMON_FLAGS} -fparse-all-comments -fno-elide-type -fdiagnostics-show-template-tree"
 
 # includes + replace all "-I"s with "-isystem"s so that we don't get warnings in external headers
-COMMON_FLAGS="${COMMON_FLAGS} ${INCLUDES}"
+COMMON_FLAGS="${INCLUDES} ${COMMON_FLAGS}"
 COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-I/-isystem /g")
 COMMON_FLAGS="${COMMON_FLAGS} -I/opt/floor/include -I${SRC_DIR} -Iinclude"
 
