@@ -456,6 +456,7 @@
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Debug;
@@ -613,6 +614,7 @@
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Release;
