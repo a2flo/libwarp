@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2021 Florian Ziesche
+ *  Copyright (C) 2015 - 2026 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,19 +20,19 @@
 
 #if defined(__APPLE__) && defined(__OBJC__) && !defined(FLOOR_NO_METAL)
 #include <libwarp/libwarp.h>
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/threading/thread_base.hpp>
 
 #include "libwarp_internal.hpp"
 
-#include <floor/compute/metal/metal_image.hpp>
+#include <floor/device/metal/metal_image.hpp>
 
-floor_inline_always static bool libwarp_wrap_metal_texture(shared_ptr<compute_image>& img,
+floor_inline_always static bool libwarp_wrap_metal_texture(std::shared_ptr<device_image>& img,
 														   id <MTLTexture> metal_texture,
 														   const bool read_write = false) {
 	if(img == nullptr || ((metal_image*)img.get())->get_metal_image() != metal_texture) {
 		img = make_shared<metal_image>(*libwarp_state->dev_queue, metal_texture, std::span<uint8_t> {},
-									   !read_write ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::READ_WRITE);
+									   !read_write ? MEMORY_FLAG::READ : MEMORY_FLAG::READ_WRITE);
 	}
 	return (img != nullptr);
 }

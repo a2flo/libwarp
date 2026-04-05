@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2021 Florian Ziesche
+ *  Copyright (C) 2015 - 2026 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,7 +27,9 @@
 #endif
 
 #if defined(__cplusplus)
-class compute_image;
+namespace fl {
+class device_image;
+}
 #include <memory>
 #endif
 
@@ -136,32 +138,32 @@ extern "C" {
 	LIBWARP_ERROR_CODE libwarp_scatter_floor(const libwarp_camera_setup* const camera_setup,
 											 const float delta,
 											 const bool clear_frame,
-											 std::shared_ptr<compute_image> color_texture,
-											 std::shared_ptr<compute_image> depth_texture,
-											 std::shared_ptr<compute_image> motion_texture,
-											 std::shared_ptr<compute_image> output_texture);
+											 std::shared_ptr<fl::device_image> color_texture,
+											 std::shared_ptr<fl::device_image> depth_texture,
+											 std::shared_ptr<fl::device_image> motion_texture,
+											 std::shared_ptr<fl::device_image> output_texture);
 	
 	//! scatter-based warping for use with any libfloor-based backend
 	//! NOTE: bidirectional warping
 	LIBWARP_ERROR_CODE libwarp_gather_floor(const libwarp_camera_setup* const camera_setup,
 											const float delta,
-											std::shared_ptr<compute_image> color_current_texture,
-											std::shared_ptr<compute_image> depth_current_texture,
-											std::shared_ptr<compute_image> color_prev_texture,
-											std::shared_ptr<compute_image> depth_prev_texture,
-											std::shared_ptr<compute_image> motion_forward_texture,
-											std::shared_ptr<compute_image> motion_backward_texture,
-											std::shared_ptr<compute_image> motion_depth_forward_texture,
-											std::shared_ptr<compute_image> motion_depth_backward_texture,
-											std::shared_ptr<compute_image> output_texture);
+											std::shared_ptr<fl::device_image> color_current_texture,
+											std::shared_ptr<fl::device_image> depth_current_texture,
+											std::shared_ptr<fl::device_image> color_prev_texture,
+											std::shared_ptr<fl::device_image> depth_prev_texture,
+											std::shared_ptr<fl::device_image> motion_forward_texture,
+											std::shared_ptr<fl::device_image> motion_backward_texture,
+											std::shared_ptr<fl::device_image> motion_depth_forward_texture,
+											std::shared_ptr<fl::device_image> motion_depth_backward_texture,
+											std::shared_ptr<fl::device_image> output_texture);
 	
 	//! scatter-based warping for use with any libfloor-based backend
 	//! NOTE: forward-only warping
 	LIBWARP_ERROR_CODE libwarp_gather_forward_only_floor(const libwarp_camera_setup* const camera_setup,
 														 const float delta,
-														 std::shared_ptr<compute_image> color_texture,
-														 std::shared_ptr<compute_image> motion_texture,
-														 std::shared_ptr<compute_image> output_texture);
+														 std::shared_ptr<fl::device_image> color_texture,
+														 std::shared_ptr<fl::device_image> motion_texture,
+														 std::shared_ptr<fl::device_image> output_texture);
 #endif
 	
 	//! optional helper function that can be used to pre-build a program for the specified camera setup
@@ -182,7 +184,7 @@ extern "C" {
 
 // <major>.<minor>.<revision><dev_stage>
 #define LIBWARP_MAJOR_VERSION 0
-#define LIBWARP_MINOR_VERSION 3
+#define LIBWARP_MINOR_VERSION 4
 #define LIBWARP_REVISION_VERSION 0
 #define LIBWARP_DEV_STAGE_VERSION 0xa1
 #define LIBWARP_DEV_STAGE_VERSION_STR "a1"

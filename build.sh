@@ -64,14 +64,14 @@ if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
 	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor|clang_patchlevel" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
-		# apple xcode/llvm/clang versioning scheme -> at least 15.0 is required (ships with Xcode / CLI tools 15.0)
-		if [ $CLANG_MAJOR -lt 15 ] || [ $CLANG_MAJOR -eq 15 -a $CLANG_MINOR -lt 0 -a $CLANG_PATCHLEVEL -lt 0 ]; then
-			error "at least Xcode 15.0 / Apple clang/LLVM 15.0.0 is required to compile this project!"
+		# Apple Xcode/LLVM/clang versioning scheme -> at least 17.0 is required (ships with Xcode / CLI tools 26.0)
+		if [ $CLANG_MAJOR -lt 17 ] || [ $CLANG_MAJOR -eq 17 -a $CLANG_MINOR -lt 0 -a $CLANG_PATCHLEVEL -lt 0 ]; then
+			error "at least Xcode 26.0 / Apple clang/LLVM 17.0.0 is required to compile this project!"
 		fi
 	else
-		# standard clang versioning scheme -> at least 16.0 is required
-		if [ $CLANG_MAJOR -lt 16 ] || [ $CLANG_MAJOR -eq 16 -a $CLANG_MINOR -lt 0 ]; then
-			error "at least clang 16.0 is required to compile this project!"
+		# standard clang versioning scheme -> at least 19.0 is required
+		if [ $CLANG_MAJOR -lt 19 ] || [ $CLANG_MAJOR -eq 19 -a $CLANG_MINOR -lt 0 ]; then
+			error "at least clang 19.0 is required to compile this project!"
 		fi
 	fi
 else
@@ -86,6 +86,7 @@ BUILD_REBUILD=0
 BUILD_STATIC=0
 BUILD_JSON=0
 BUILD_VERBOSE=0
+BUILD_DIR_ROOT="build"
 BUILD_JOB_COUNT=0
 
 # read/evaluate floor_conf.hpp to know which build configuration should be used (must match the floor one!)
@@ -147,7 +148,8 @@ for arg in "$@"; do
 			echo "misc flags:"
 			echo "	-v                 verbose output (prints all executed compiler and linker commands, and some other information)"
 			echo "	-vv                very verbose output (same as -v + runs all compiler and linker commands with -v)"
-			echo "	-j#                explicitly use # amount of build jobs (instead of automatically using #logical-cpus jobs)"
+			echo "	-j#                explicitly use # amount of build jobs (instead of automatically using #logical-CPUs jobs)"
+			echo "	-build-dir=<dir>   sets the build directory for temporary files to the specified <dir> (defaults to 'build')"
 			echo ""
 			echo ""
 			echo "example:"
@@ -185,6 +187,9 @@ for arg in "$@"; do
 				BUILD_JOB_COUNT=0
 			fi
 			;;
+		"-build-dir="*)
+			BUILD_DIR_ROOT=$(echo $arg | cut -c 12-)
+			;;
 		"libstdc++")
 			BUILD_CONF_LIBSTDCXX=1
 			;;
@@ -219,7 +224,7 @@ done
 # name of the target (part of the binary name)
 TARGET_NAME=warp
 
-# check on which platform we're compiling + check how many h/w threads can be used (logical cpus)
+# check on which platform we're compiling + check how many h/w threads can be used (logical CPUs)
 BUILD_PLATFORM=$(uname | tr [:upper:] [:lower:])
 BUILD_OS="unknown"
 BUILD_CPU_COUNT=1
@@ -355,7 +360,7 @@ TARGET_BIN=${BIN_DIR}/${TARGET_BIN_NAME}
 TARGET_STATIC_BIN=${BIN_DIR}/${TARGET_STATIC_BIN_NAME}
 
 # root folder of the source code
-SRC_DIR="src"
+SRC_DIR="src/"
 
 # all source code sub-directories, relative to SRC_DIR
 SRC_SUB_DIRS="."
@@ -363,9 +368,9 @@ SRC_SUB_DIRS="."
 # build directory where all temporary files are stored (*.o, etc.)
 BUILD_DIR=
 if [ $BUILD_MODE == "debug" ]; then
-	BUILD_DIR=build/debug
+	BUILD_DIR=${BUILD_DIR_ROOT}/debug
 else
-	BUILD_DIR=build/release
+	BUILD_DIR=${BUILD_DIR_ROOT}/release
 fi
 
 # current directory + escaped form
@@ -491,7 +496,7 @@ if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	if [ $BUILD_OS == "linux" -o $BUILD_OS == "freebsd" -o $BUILD_OS == "openbsd" ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} Xxf86vm"
 	elif [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
-		UNCHECKED_LIBS="${UNCHECKED_LIBS} gdi32"
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} gdi32 mincore"
 	fi
 	
 	# linux:
@@ -630,8 +635,8 @@ fi
 ##########################################
 # flags
 
-# set up initial c++ and c flags
-CXXFLAGS="${CXXFLAGS} -std=gnu++2b"
+# set up initial C++ and C flags
+CXXFLAGS="${CXXFLAGS} -std=gnu++26"
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
@@ -650,10 +655,12 @@ if [ $BUILD_OS == "mingw" ]; then
 fi
 
 # arch handling (use -arch on macOS/iOS and -m64 everywhere else, except for mingw)
+BUILD_IS_ARM=0
 if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	case $BUILD_ARCH in
 		"arm"*)
 			COMMON_FLAGS="${COMMON_FLAGS} -arch arm64"
+			BUILD_IS_ARM=1
 			;;
 		*)
 			COMMON_FLAGS="${COMMON_FLAGS} -arch x86_64"
@@ -670,6 +677,10 @@ COMMON_FLAGS="${COMMON_FLAGS} -ffast-math -fstrict-aliasing"
 # set flags when building for the native/host cpu
 if [ $BUILD_CONF_NATIVE -gt 0 ]; then
 	COMMON_FLAGS="${COMMON_FLAGS} -march=native -mtune=native"
+else
+	if [ $BUILD_IS_ARM -eq 0 ]; then
+		COMMON_FLAGS="${COMMON_FLAGS} -march=corei7-avx -mf16c"
+	fi
 fi
 
 # debug flags, only used in the debug target
@@ -681,11 +692,11 @@ else
 fi
 
 # release mode flags/optimizations
-REL_FLAGS="-Ofast -funroll-loops"
-# if we're building for the native/host cpu, the appropriate sse/avx flags will already be set/used
+REL_FLAGS="-O3 -funroll-loops"
+# if we're building for the native/host cpu, the appropriate SSE/AVX flags will already be set/used
 if [ $BUILD_CONF_NATIVE -eq 0 ]; then
 	if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
-		# TODO: sse/avx selection/config? default to sse4.1 for now (core2)
+		# TODO: SSE/AVX selection/config? default to sse4.1 for now (core2)
 		REL_FLAGS="${REL_FLAGS} -msse4.1"
 	fi
 fi
@@ -697,9 +708,9 @@ REL_OPT_LD_FLAGS="-flto"
 # macOS/iOS: set min version
 if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	if [ $BUILD_OS == "macos" ]; then
-		COMMON_FLAGS="${COMMON_FLAGS} -mmacos-version-min=13.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -mmacos-version-min=15.6"
 	else # ios
-		COMMON_FLAGS="${COMMON_FLAGS} -mios-version-min=16.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -mios-version-min=18.6"
 	fi
 	
 	# set lib version
@@ -727,14 +738,15 @@ COMMON_FLAGS="${COMMON_FLAGS} -DFLOOR_EXPORT=1"
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (C++23 with gnu and clang extensions is required)
+# remove std compat warnings (C++26 with GNU and clang extensions is required)
 WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
-WARNINGS="${WARNINGS} -Wno-c++17-compat -Wno-c++17-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++17-compat -Wno-c++17-compat-pedantic -Wno-c++17-extensions"
 WARNINGS="${WARNINGS} -Wno-c++20-compat -Wno-c++20-compat-pedantic -Wno-c++20-extensions"
 WARNINGS="${WARNINGS} -Wno-c++23-compat -Wno-c++23-compat-pedantic -Wno-c++23-extensions"
-WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
+WARNINGS="${WARNINGS} -Wno-c++26-compat -Wno-c++26-compat-pedantic -Wno-c++26-extensions"
+WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions -Wno-c17-extensions -Wno-c23-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
 WARNINGS="${WARNINGS} -Wno-nullability-extension"
 # don't be too pedantic
@@ -756,18 +768,15 @@ WARNINGS="${WARNINGS} -Wthread-safety -Wthread-safety-negative -Wthread-safety-b
 # ignore "explicit move to avoid copying on older compilers" warning
 WARNINGS="${WARNINGS} -Wno-return-std-move-in-c++11"
 # ignore unsafe pointer/buffer access warnings
-WARNINGS="${WARNINGS} -Wno-unsafe-buffer-usage"
+WARNINGS="${WARNINGS} -Wno-unsafe-buffer-usage -Wno-unsafe-buffer-usage-in-container"
 # ignore reserved identifier warnings because of "__" prefixes
 WARNINGS="${WARNINGS} -Wno-reserved-identifier"
 # ignore UD NaN/infinity due to fast-math
 WARNINGS="${WARNINGS} -Wno-nan-infinity-disabled"
 # ignore warnings about missing designated initializer when they are default-initialized
-# on clang < 19: disable missing field initializer warnings altogether
-if [ $CLANG_MAJOR -ge 19 ]; then
-	WARNINGS="${WARNINGS} -Wno-missing-designated-field-initializers"
-else
-	WARNINGS="${WARNINGS} -Wno-missing-field-initializers"
-fi
+WARNINGS="${WARNINGS} -Wno-missing-designated-field-initializers"
+# ignore missing include directories, we may not always have all specified include dirs
+WARNINGS="${WARNINGS} -Wno-missing-include-dirs"
 COMMON_FLAGS="${COMMON_FLAGS} ${WARNINGS}"
 
 # diagnostics
@@ -797,8 +806,13 @@ fi
 
 # mingw: create import lib and export everything
 if [ $BUILD_OS == "mingw" ]; then
-	LDFLAGS="${LDFLAGS} -Wl,--export-all-symbols -Wl,-no-undefined -Wl,--enable-runtime-pseudo-reloc -Wl,--out-implib,bin/${TARGET_BIN_NAME}.a"
+	LDFLAGS="${LDFLAGS} -Wl,--export-all-symbols -Wl,-no-undefined -Wl,--enable-runtime-pseudo-reloc -Wl,--out-implib,${BIN_DIR}/${TARGET_BIN_NAME}.a"
 fi
+
+# misc workarounds
+# remove direct and indirect /usr/include paths
+COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-isystem \/usr\/lib\/include //g")
+COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-isystem \/usr\/lib\/pkgconfig\/..\/..\/include //g")
 
 # finally: add all common c++ and c flags/options
 CXXFLAGS="${CXXFLAGS} ${COMMON_FLAGS}"
@@ -938,7 +952,7 @@ needs_rebuild() {
 		info "rebuild because >${BUILD_DIR}/${source_file}.d< doesn't exist or BUILD_REBUILD $BUILD_REBUILD"
 		rebuild_file=1
 	else
-		dep_list=$(cat ${BUILD_DIR}/${source_file}.d | sed -E "s/deps://" | sed -E "s/ \\\\//"  | sed -E "s/${ESC_CUR_DIR}\/\.\.\/libwarp\//${ESC_CUR_DIR}\//g" | sed -E "s/\.\.\/libwarp\//${ESC_CUR_DIR}\//g"  | sed -E "s/\.\.\\\\libwarp\//${ESC_CUR_DIR}\//g" | sed -E "s/([^[:space:]]*)$/\"\0\"/g")
+		dep_list=$(cat ${BUILD_DIR}/${source_file}.d | sed -E "s/deps://" | sed -E "s/ \\\\//" | sed -E "s/${ESC_CUR_DIR}\/\.\.\/libwarp\//${ESC_CUR_DIR}\//g" | sed -E "s/\.\.\/libwarp\//${ESC_CUR_DIR}\//g" | sed -E "s/\.\.\\\\libwarp\//${ESC_CUR_DIR}\//g" | tr ' ' '\n' | grep -v -E '^$' | sort | uniq | sed -E "s/([^[:space:]]*)$/\"\0\"/g")
 		if [ "${dep_list}" ]; then
 			file_time=$(file_mod_time "${bin_file_name}")
 			dep_times=$(file_mod_time ${dep_list})
@@ -952,14 +966,6 @@ needs_rebuild() {
 	fi
 	if [ $rebuild_file -gt 0 ]; then
 		echo "1"
-	fi
-}
-handle_build_errors() {
-	# abort on build errors
-	if [ "${build_error}" == "true" ]; then
-		# wait until all build jobs have finished (all error output has been written)
-		wait
-		exit -1
 	fi
 }
 
@@ -1091,30 +1097,38 @@ if [ ! -f ${TARGET_BIN} ]; then
 	relink_target=1
 	relink_any=1
 fi
-if [ ! -f ${TARGET_STATIC_BIN} ]; then
-	relink_static_target=1
-	relink_any=1
+if [ $BUILD_STATIC -gt 0 ]; then
+	if [ -f ${TARGET_STATIC_BIN} ]; then
+		relink_static_target=1
+		relink_any=1
+	fi
 fi
 
 if [ $relink_any -eq 0 -a ${BUILD_REBUILD} -eq 0 ]; then
 	target_time=$(file_mod_time "${TARGET_BIN}")
-	static_target_time=$(file_mod_time "${TARGET_STATIC_BIN}")
+	static_target_time=0
+	if [ $BUILD_STATIC -gt 0 ]; then
+		static_target_time=$(file_mod_time "${TARGET_STATIC_BIN}")
+	fi
 	obj_times=$(file_mod_time "${OBJ_FILES}")
 	for obj_time in ${obj_times}; do
 		if [ $obj_time -gt $target_time ]; then
 			relink_target=1
 		fi
-		if [ $obj_time -gt $static_target_time ]; then
-			relink_static_target=1
+		if [ $BUILD_STATIC -gt 0 ]; then
+			if [ $obj_time -gt $static_target_time ]; then
+				relink_static_target=1
+			fi
 		fi
 	done
 fi
 
 if [ $relink_target -gt 0  ]; then
 	info "linking ..."
-	linker_cmd="${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}"
+	linker_cmd="${CXX} -o ${BUILD_DIR}/${TARGET_BIN_NAME} ${OBJ_FILES} ${LDFLAGS}"
 	verbose "${linker_cmd}"
 	eval ${linker_cmd}
+	mv ${BUILD_DIR}/${TARGET_BIN_NAME} ${TARGET_BIN}
 fi
 
 if [ $relink_static_target -gt 0 -a $BUILD_STATIC -gt 0 ]; then

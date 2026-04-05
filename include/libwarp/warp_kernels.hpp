@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2021 Florian Ziesche
+ *  Copyright (C) 2015 - 2026 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __LIBWARP_WARP_KERNELS_HPP__
-#define __LIBWARP_WARP_KERNELS_HPP__
+#pragma once
 
 #include <floor/core/essentials.hpp>
+using namespace fl;
 
 //////////////////////////////////////////
 // compile time defines
@@ -51,7 +51,7 @@
 
 // TILE_SIZE_X: work-group x-size / tile width
 #if !defined(TILE_SIZE_X)
-#if defined(__WINDOWS__) && defined(FLOOR_COMPUTE_HOST)
+#if defined(__WINDOWS__) && defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE)
 // on windows with host-compute: must be limited to 8
 #define TILE_SIZE_X 8
 #else // everywhere else: always use 32 as the default
@@ -61,7 +61,7 @@
 
 // TILE_SIZE_Y: work-group y-size / tile height
 #if !defined(TILE_SIZE_Y)
-#if defined(__WINDOWS__) && defined(FLOOR_COMPUTE_HOST)
+#if defined(__WINDOWS__) && defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE)
 // on windows with host-compute: must be limited to 8
 #define TILE_SIZE_Y 8
 #else // everywhere else: always use 16 as the default
@@ -69,7 +69,7 @@
 #endif
 #endif
 
-#if defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE)
+#if defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE)
 // work-around host (!device) compilation
 #define SCREEN_ORIGIN_LEFT_TOP 1
 #endif
@@ -96,10 +96,10 @@ enum class depth_type {
 
 //////////////////////////////////////////
 // all compute code from here
-#if defined(FLOOR_COMPUTE)
+#if defined(FLOOR_DEVICE)
 
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
+#if defined(FLOOR_DEVICE_HOST_COMPUTE)
+#include <floor/device/backend/common.hpp>
 #endif
 
 // if tiles (work-group x/y sizes) overlap the screen size, a check is neccesary to ignore the overlapping work-items
@@ -323,7 +323,7 @@ static constexpr auto compute_coefficients() {
 		ret[i] = float(sum_div * (long double)const_math::binomial(effective_n - 1, k));
 	}
 	
-	return ret;
+	floor_return_no_nrvo(ret);
 }
 
 //! the amount of search iterations we perform in gather kernels
@@ -434,7 +434,7 @@ kernel_2d() void libwarp_warp_gather(const_image_2d<float> img_color,
 						delta * warp_camera::linearize_depth<depth_type::z_div_w>(depth_fwd));
 	const auto z_bwd = (warp_camera::linearize_depth(img_depth.read(p_bwd)) +
 						(1.0f - delta) * warp_camera::linearize_depth<depth_type::z_div_w>(depth_bwd));
-	const auto depth_diff = abs(z_fwd - z_bwd);
+	const auto depth_diff = math::abs(z_fwd - z_bwd);
 	constexpr const float epsilon_2 { 2.0f }; // aka "max depth difference between fwd and bwd"
 	
 	// check if fwd/bwd pass the screen-space error check
@@ -454,11 +454,11 @@ kernel_2d() void libwarp_warp_gather(const_image_2d<float> img_color,
 				// depth from other frame
 				const auto z_fwd_other = (img_depth.read(p_fwd + motion_fwd) +
 										  (1.0f - delta) * img_motion_depth_backward.read(p_fwd + motion_fwd).y);
-				color = (abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
+				color = (math::abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 			} else { // bwd < fwd
 				const auto z_bwd_other = (img_depth_prev.read(p_bwd + motion_bwd) +
 										  delta * img_motion_depth_forward.read(p_bwd + motion_bwd).x);
-				color = (abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
+				color = (math::abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 			}
 		}
 	} else if (fwd_valid) {
@@ -547,6 +547,4 @@ kernel_2d() void libwarp_debug_motion_depth_output(const_image_2d<float2> motion
 	output.write(global_id.xy, { motion_depth.x, motion_depth.y, 0.0f, 1.0f });
 }
 
-#endif // FLOOR_COMPUTE
-
-#endif // __LIBWARP_WARP_KERNELS_HPP__
+#endif // FLOOR_DEVICE_HOST_COMPUTE

@@ -1,6 +1,6 @@
 /*
  *  libwarp
- *  Copyright (C) 2015 - 2021 Florian Ziesche
+ *  Copyright (C) 2015 - 2026 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
 #define __LIBWARP_INTERNAL_HPP__
 
 #include <libwarp/libwarp.h>
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/threading/thread_base.hpp>
+
+using namespace fl;
 
 //
 enum WARP_KERNEL : uint32_t {
@@ -42,49 +44,49 @@ floor_inline_always static constexpr size_t warp_kernel_count() {
 }
 
 struct libwarp_state_struct {
-	shared_ptr<compute_context> ctx;
-	const compute_device* dev { nullptr };
-	shared_ptr<compute_queue> dev_queue;
+	std::shared_ptr<device_context> ctx;
+	const device* dev { nullptr };
+	std::shared_ptr<device_queue> dev_queue;
 	uint2 tile_size { 32, 16 }; // == 512 work-items which should work everywhere
 	bool did_init_libfloor { false };
 	
 	//
 	struct camera_setup_program {
-		shared_ptr<compute_program> program;
-		array<shared_ptr<compute_kernel>, warp_kernel_count()> kernels;
+		std::shared_ptr<device_program> program;
+		std::array<std::shared_ptr<device_function>, warp_kernel_count()> kernels;
 	};
-	vector<pair<libwarp_camera_setup, shared_ptr<camera_setup_program>>> programs;
+	std::vector<std::pair<libwarp_camera_setup, std::shared_ptr<camera_setup_program>>> programs;
 	
 	//
 	struct {
-		shared_ptr<compute_image> color;
-		shared_ptr<compute_image> depth;
-		shared_ptr<compute_image> motion;
-		shared_ptr<compute_image> output;
-		shared_ptr<compute_buffer> depth_buffer;
+		std::shared_ptr<device_image> color;
+		std::shared_ptr<device_image> depth;
+		std::shared_ptr<device_image> motion;
+		std::shared_ptr<device_image> output;
+		std::shared_ptr<device_buffer> depth_buffer;
 	} scatter;
 	struct {
-		shared_ptr<compute_image> color;
-		shared_ptr<compute_image> motion;
-		shared_ptr<compute_image> output;
+		std::shared_ptr<device_image> color;
+		std::shared_ptr<device_image> motion;
+		std::shared_ptr<device_image> output;
 	} gather_forward;
 	struct {
-		shared_ptr<compute_image> color[2];
-		shared_ptr<compute_image> depth[2];
-		shared_ptr<compute_image> motion[4];
-		shared_ptr<compute_image> motion_depth[2];
-		shared_ptr<compute_image> output;
+		std::shared_ptr<device_image> color[2];
+		std::shared_ptr<device_image> depth[2];
+		std::shared_ptr<device_image> motion[4];
+		std::shared_ptr<device_image> motion_depth[2];
+		std::shared_ptr<device_image> output;
 	} gather;
 	
 	struct {
-		shared_ptr<compute_image> debug_output;
-		shared_ptr<compute_image> depth;
-		shared_ptr<compute_image> motion;
-		shared_ptr<compute_image> motion_depth;
+		std::shared_ptr<device_image> debug_output;
+		std::shared_ptr<device_image> depth;
+		std::shared_ptr<device_image> motion;
+		std::shared_ptr<device_image> motion_depth;
 	} debug;
 };
 // contains all global state, can simply be cleared by setting to nullptr
-extern unique_ptr<libwarp_state_struct> libwarp_state;
+extern std::unique_ptr<libwarp_state_struct> libwarp_state;
 // none of the libwarp functions are able to run concurrently, must protect them via a global lock
 extern safe_mutex libwarp_lock;
 
@@ -97,7 +99,7 @@ LIBWARP_ERROR_CODE libwarp_init();
 }
 
 // actually builds the warp program for a specific camera setup
-pair<LIBWARP_ERROR_CODE, shared_ptr<libwarp_state_struct::camera_setup_program>>
+std::pair<LIBWARP_ERROR_CODE, std::shared_ptr<libwarp_state_struct::camera_setup_program>>
 libwarp_build(const libwarp_camera_setup* const camera_setup);
 
 // runs the specified warp kernel, all inlined and DCE'ed
@@ -115,7 +117,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 	const auto global_work_size = uint2(camera_setup->screen_width,
 										camera_setup->screen_height).rounded_next_multiple(libwarp_state->tile_size);
 	
-	compute_queue::execution_parameters_t exec_params {
+	device_queue::execution_parameters_t exec_params {
 		.execution_dim = 2,
 		.global_work_size = global_work_size,
 		.local_work_size = libwarp_state->tile_size,
@@ -125,7 +127,7 @@ floor_inline_always LIBWARP_ERROR_CODE run_warp_kernel(const libwarp_camera_setu
 	};
 	switch (kernel_idx) {
 		case KERNEL_SCATTER_DEPTH_PASS: {
-			const float clear_depth = numeric_limits<float>::max();
+			const float clear_depth = std::numeric_limits<float>::max();
 			libwarp_state->scatter.depth_buffer->fill(*libwarp_state->dev_queue, &clear_depth, sizeof(clear_depth));
 			
 			exec_params.args = {

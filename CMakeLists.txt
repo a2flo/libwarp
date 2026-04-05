@@ -1,11 +1,13 @@
 # CMake project for libwarp
-cmake_minimum_required(VERSION 3.21)
-if (WIN32)
+cmake_minimum_required(VERSION 3.30)
+# NOTE: "lib" prefix is automatically added by CMake when not targeting VS/CMake
+# also: can't use "if (MSVC)" before project(...), so use VCPKG_TARGET_TRIPLET instead
+if (VCPKG_TARGET_TRIPLET)
 	project(libwarp)
-else ()
+else (VCPKG_TARGET_TRIPLET)
 	project(warp)
-endif ()
-set(CMAKE_CXX_STANDARD 23)
+endif (VCPKG_TARGET_TRIPLET)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
