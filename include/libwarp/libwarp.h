@@ -75,8 +75,8 @@ extern "C" {
 		LIBWARP_DEPTH_Z_DIV_W,
 		//! linear depth [0, far-plane]
 		LIBWARP_DEPTH_LINEAR,
-		//! log depth, computed in software (not supported yet)
-		//LIBWARP_DEPTH_LOG,
+		//! reverse normalized Z in [0, 1] with 1 = near, 0 = far
+		LIBWARP_DEPTH_REVERSE_NORMALIZED,
 	} LIBWARP_DEPTH_TYPE;
 	
 	//! all necessary camera state

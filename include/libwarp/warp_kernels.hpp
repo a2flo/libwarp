@@ -87,6 +87,8 @@ enum class depth_type {
 	z_div_w,
 	// linear depth [0, far-plane]
 	linear,
+	// reverse normalized Z in [0, 1] with 1 = near, 0 = far
+	reverse_normalized,
 };
 
 #if !defined(DEFAULT_DEPTH_TYPE)
@@ -136,7 +138,8 @@ namespace warp_camera {
 	static constexpr const float2 near_far_plane { LIBWARP_NEAR_PLANE, LIBWARP_FAR_PLANE };
 	
 	// reconstructs a 3D position from a 2D screen coordinate and its associated real world depth
-	static float3 reconstruct_position(const uint2& coord, const float& linear_depth) {
+	// NOTE: when calling this with a floating point coordinate, note that the float->int->float round-trip is very much needed
+	static constexpr inline float3 reconstruct_position(const int2 coord, const float linear_depth) {
 		// originally this was: ((float2(coord) + 0.5f) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth
 		// -> simplified below (with constexpr terms forced to be computed at compile-time)
 		constexpr const auto ce_term_1 = inv_screen_size * float2(right_vec, up_vec);
@@ -149,7 +152,7 @@ namespace warp_camera {
 	}
 	
 	// reprojects a 3D position back to 2D
-	static float2 reproject_position(const float3& position) {
+	static constexpr inline float2 reproject_position(const float3 position) {
 		constexpr const auto ce_term = float2 { 1.0f / right_vec, 1.0f / up_vec };
 		const auto proj_dst_coord = (position.xy * ce_term) / -position.z;
 		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size);
@@ -157,22 +160,55 @@ namespace warp_camera {
 	
 	// linearizes the input depth value according to the depth type and returns the real world depth value
 	template <depth_type type = DEFAULT_DEPTH_TYPE>
-	constexpr static float linearize_depth(const float& depth) {
-		if (type == depth_type::normalized) {
+	static constexpr inline float linearize_depth(const float depth) {
+		if constexpr (type == depth_type::normalized) {
 			// reading from the actual depth buffer which is normalized in [0, 1]
+			// NOTE: for Vulkan/Metal right-handed projection matrix
 			constexpr const float2 near_far_projection {
-				-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
-				(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+				-near_far_plane.y / (near_far_plane.y - near_far_plane.x),
+				(-near_far_plane.y * near_far_plane.x) / (near_far_plane.y - near_far_plane.x),
 			};
 			// special case: clear/full depth, assume this comes from a normalized sky box
-			return (depth == 1.0f ? 1.0f : near_far_projection.y / (depth - near_far_projection.x));
-		} else if (type == depth_type::z_div_w) {
+			return (depth == 1.0f ? 1.0f : near_far_projection.y / (depth + near_far_projection.x));
+		} else if constexpr (type == depth_type::reverse_normalized) {
+			// reading from the actual depth buffer which is normalized in [0, 1]
+			constexpr const float2 near_far_projection {
+				-near_far_plane.y / (near_far_plane.x - near_far_plane.y) - 1.0f,
+				(-near_far_plane.x * near_far_plane.y) / (near_far_plane.x - near_far_plane.y),
+			};
+			// special case: clear/full depth, assume this comes from a normalized sky box
+			return (depth == 0.0f ? 0.0f : near_far_projection.y / (depth + near_far_projection.x));
+		} else if constexpr (type == depth_type::z_div_w) {
 			// depth is written as z/w in shader -> need to perform a small adjustment to account for near/far plane to get the real world depth
 			// (note that this error is almost imperceptible and could just be ignored)
 			return depth + near_far_plane.x - (depth * (near_far_plane.x / near_far_plane.y));
-		} else if (type == depth_type::linear) {
+		} else if constexpr (type == depth_type::linear) {
 			// already linear, just pass through
 			return depth;
+		}
+		floor_unreachable();
+	}
+	
+	// delinearizes the linear input depth value according to the depth type and returns the non-linear depth value
+	template <depth_type type = DEFAULT_DEPTH_TYPE>
+	[[maybe_unused]] static constexpr inline float delinearize_depth(const float linear_depth) {
+		if constexpr (type == depth_type::normalized) {
+			constexpr const float2 near_far_projection {
+				-near_far_plane.y / (near_far_plane.y - near_far_plane.x),
+				(-near_far_plane.y * near_far_plane.x) / (near_far_plane.y - near_far_plane.x),
+			};
+			return (near_far_projection.y / linear_depth) - near_far_projection.x;
+		} else if constexpr (type == depth_type::reverse_normalized) {
+			constexpr const float2 near_far_projection {
+				-near_far_plane.y / (near_far_plane.x - near_far_plane.y) - 1.0f,
+				(-near_far_plane.x * near_far_plane.y) / (near_far_plane.x - near_far_plane.y),
+			};
+			return (near_far_projection.y / linear_depth) - near_far_projection.x;
+		} else if constexpr (type == depth_type::z_div_w) {
+			instantiation_trap_dependent_value(type, "unsupported");
+		} else if constexpr (type == depth_type::linear) {
+			// already linear, just pass through
+			return linear_depth;
 		}
 		floor_unreachable();
 	}
@@ -180,7 +216,7 @@ namespace warp_camera {
 
 // decodes the encoded input 3D motion vector
 // format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
-floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motion) {
+floor_inline_always static float3 decode_3d_motion(const uint32_t encoded_motion) {
 	// lookup into constant memory + 1 shift is faster than 3 ANDs + 3 cmps/sels
 	static constexpr const float3 signs_lookup[] {
 		{ 1.0f, 1.0f, 1.0f },
@@ -208,8 +244,8 @@ floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motio
 
 // computes the "scattered" destination coordinate of the pixel at 'coord',
 // according to it's depth value (which is also returned) and motion vector, as well as the current time delta
-floor_inline_always static auto scatter(const int2& coord,
-										const float& delta,
+floor_inline_always static auto scatter(const int2 coord,
+										const float delta,
 										depth_image_type img_depth,
 										const_image_2d<uint1> img_motion) {
 	// read rendered/input depth and linearize it (linear distance from the camera origin)
@@ -277,7 +313,7 @@ kernel_2d() void libwarp_warp_scatter_color(const_image_2d<float> img_color,
 
 // decodes the encoded input 2D motion vector
 // format: [16-bit y][16-bit x]
-static float2 decode_2d_motion(const uint32_t& encoded_motion) {
+static float2 decode_2d_motion(const uint32_t encoded_motion) {
 	// NOTE: this no longer needs to perform Y * -1 multiplication here
 	return unpack_snorm_2x16(encoded_motion) * 0.5f;
 }

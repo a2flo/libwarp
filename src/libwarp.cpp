@@ -142,6 +142,21 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 	}
 #endif
 
+	std::string_view depth_type_str;
+	switch (camera_setup->depth_type) {
+		case LIBWARP_DEPTH_NORMALIZED:
+			depth_type_str = "depth_type::normalized";
+			break;
+		case LIBWARP_DEPTH_Z_DIV_W:
+			depth_type_str = "depth_type::z_div_w";
+			break;
+		case LIBWARP_DEPTH_LINEAR:
+			depth_type_str = "depth_type::linear";
+			break;
+		case LIBWARP_DEPTH_REVERSE_NORMALIZED:
+			depth_type_str = "depth_type::reverse_normalized";
+			break;
+	}
 	program->program = libwarp_state->ctx->add_program_file(kernel_file_name,
 															// camera setup
 															" -DLIBWARP_SCREEN_WIDTH=" + std::to_string(camera_setup->screen_width) +
@@ -151,11 +166,7 @@ libwarp_build(const libwarp_camera_setup* const camera_setup) {
 															" -DLIBWARP_FAR_PLANE=" + std::to_string(camera_setup->far_plane) + "f" +
 															" -DTILE_SIZE_X=" + std::to_string(libwarp_state->tile_size.x) +
 															" -DTILE_SIZE_Y=" + std::to_string(libwarp_state->tile_size.y) +
-															" -DDEFAULT_DEPTH_TYPE=" +
-															(camera_setup->depth_type == LIBWARP_DEPTH_NORMALIZED ?
-															 "depth_type::normalized" :
-															 (camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ?
-															  "depth_type::z_div_w" : "depth_type::linear")) +
+															" -DDEFAULT_DEPTH_TYPE=" + depth_type_str +
 															" -DNATIVE_DEPTH_IMAGE=" +
 															(camera_setup->depth_type == LIBWARP_DEPTH_Z_DIV_W ? "0" : "1") +
 															(camera_setup->is_screen_origin_top_left ?
